@@ -33,9 +33,9 @@ function get_max_alphas!(V::Vector{Float64}, alpha::Matrix{Float64},
 end # function get_max_alphas!
 
 
-function qmdp(states::Matrix, actions::Matrix, get_next_state::Function, 
-              get_reward::Function, sigmas::Matrix{Float64}, weights::Vector{Float64},
-              verbose::Bool, maxIter::Int64, gamma::Float64, alphaTol::Float64)
+function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64}, 
+              weights::Vector{Float64}, verbose::Bool, maxIter::Int64, 
+              gamma::Float64, alphaTol::Float64)
     nStates = size(states, 2)
     nActions = size(actions, 2)
     nSigmas = size(sigmas, 2)
@@ -100,8 +100,8 @@ end # function qmdp
 function qmdp(d::DoubleUAV, verbose::Bool = false, maxIter::Int64 = MAX_ITER, 
               gamma::Float64 = GAMMA, alphaTol::Float64 = ALPHA_TOL)
     p = d.pomdp
-    alpha = qmdp(p.states, p.actions, p.get_next_state, p.get_reward, 
-                 d.sigmas, d.weights, verbose, maxIter, gamma, alphaTol)
+    alpha = qmdp(p.states, p.actions, d.sigmas, d.weights, verbose, maxIter, 
+                 gamma, alphaTol)
     return alpha
 end # function qmdp
 

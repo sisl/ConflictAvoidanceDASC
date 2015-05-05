@@ -6,8 +6,7 @@ Description
 
 module POMDPs
 
-export
-    POMDP
+export POMDP
 
 
 type POMDP
@@ -15,16 +14,11 @@ type POMDP
     states          :: Matrix
     actions         :: Array
     observations    :: Matrix
-    get_next_state  :: Function
-    get_reward      :: Function
-    get_obs_prob    :: Function
     term_state      :: Vector{Float64}
     
     function POMDP(states::Matrix, actions::Array, observations::Matrix, 
-                   get_next_state::Function, get_reward::Function, 
-                   get_obs_prob::Function, term_state::Vector{Float64})
-        return new(states, actions, observations, get_next_state, get_reward, 
-                   get_obs_prob, term_state)
+                   term_state::Vector{Float64})
+        return new(states, actions, observations, term_state)
     end # function POMDP
     
 end # type POMDP

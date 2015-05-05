@@ -11,7 +11,7 @@ module DoubleUAVs
 
 using POMDPs
 
-export DoubleUAV, gen_reward, NSTATES
+export NSTATES, DoubleUAV, get_next_state, get_reward
 
 
 const DT = 5.0              # [s]
@@ -112,10 +112,7 @@ type DoubleUAV
     weights::   Vector{Float64}
     
     function DoubleUAV()
-        get_next_state = gen_next_state(DT)
-        get_reward = gen_reward()
-        p = POMDP(STATES_OBSERVATIONS, ACTIONS, STATES_OBSERVATIONS, 
-                  get_next_state, get_reward, x -> x, TERM_STATE)
+        p = POMDP(STATES_OBSERVATIONS, ACTIONS, STATES_OBSERVATIONS, TERM_STATE)
         return new(p, SIGMAS, WEIGHTS)
     end # function DoubleUAV
 
@@ -127,7 +124,7 @@ function norm_angle(angle::Float64)
 end # function norm_angle
 
 
-function gen_next_state(dt::Float64)
+function gen_next_state(dt::Float64 = DT)
     function get_next_state(state::Vector{Float64}, action::Vector{Float64}, 
                             sigmas::Matrix{Float64} = SIGMAS, isigma::Int64 = 1)
         x = state[1]
@@ -207,6 +204,7 @@ function gen_next_state(dt::Float64)
             end # if
         end # if
     end # function get_next_state
+    return get_next_state
 end # function gen_next_state
 
 
@@ -234,5 +232,9 @@ function gen_reward()
     end # function get_reward
     return get_reward
 end # function gen_reward
+
+
+get_next_state = gen_next_state(DT)
+get_reward = gen_reward()
 
 end # module DoubleUAVs
