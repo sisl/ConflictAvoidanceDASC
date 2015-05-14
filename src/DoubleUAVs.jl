@@ -81,7 +81,7 @@ const TERM_STATE = TERM_STATE_VAR * ones(STATE_DIM)
 states[:, end] = TERM_STATE
 const STATES_OBSERVATIONS = states
 
-indivActions = deg2rad(-20:10:20)
+indivActions = deg2rad(linspace(-20, 20, 5))
 nIndivActions = length(indivActions)
 actions = zeros(2, nIndivActions^2)
 iaction = 1
@@ -95,7 +95,7 @@ end # for ia2
 const ACTIONS = actions
 
 const SIGMA_V = 2.0             # [m/s]
-const SIGMA_B = deg2rad(5)      # [rad]
+const SIGMA_B = deg2rad(4.0)    # [rad]
 const SIGMAS = [0 SIGMA_B -SIGMA_B 0 0 0 0 0 0;
                 0 0 0 SIGMA_B -SIGMA_B 0 0 0 0;
                 0 0 0 0 0 SIGMA_V -SIGMA_V 0 0;

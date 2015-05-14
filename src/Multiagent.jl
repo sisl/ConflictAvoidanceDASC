@@ -30,7 +30,7 @@ const PV2 = 5
 const NPSTATES = size(PROBLEM.pomdp.states, 1)
 const NSTATES = size(PROBLEM.pomdp.states, 2)
 
-const INDIV_ACTIONS = deg2rad(-20:10:20)
+const INDIV_ACTIONS = deg2rad(linspace(-20, 20, 5))
 const NINDIV_ACTIONS = length(INDIV_ACTIONS)
 actions = zeros(2, NINDIV_ACTIONS^2)
 iaction = 1
@@ -54,16 +54,16 @@ const DIM_STATES = 8        # TYPE_SIMPLE state dimensionality
 const TERM_STATE = 1e5 * ones(DIM_POMDP_STATES)
 const TERM_STATE_REAL = 1e5 * ones(DIM_STATES)
 
-const XMIN = -1.5e3
-const XMAX = 1.5e3
-const YMIN = -1.5e3
-const YMAX = 1.5e3
+const XMIN = -2e3
+const XMAX = 2e3
+const YMIN = -2e3
+const YMAX = 2e3
 const PMIN = 0.0
 const PMAX = 2 * pi
 const VMIN = 10
 const VMAX = 20
 
-const WN = 0.5              # [rad/s]
+const WN = 0.15             # [rad/s]
 const MIN_SEP = 500.0       # [m]
 const MIN_SEP_INIT = 600.0  # [m]
 
@@ -82,8 +82,10 @@ const SIGMA = deg2rad(2)    # [rad] gaussian noise variance
 
 const CONSENSUS_REWARD = 0.5
 
-const SIGMA_V = 2.0         # [m/s]
+const SIGMA_V = 1.0         # [m/s]
 const SIGMA_B = deg2rad(2)  # [rad]
+const SIGMA_P = deg2rad(2)  # [rad]
+const SIGMA_XY = 50         # [m]
 
 const LARGE_NUMBER = int64(1e9)
 
@@ -658,21 +660,20 @@ function fuse_uncrd(uavs::Vector{UAV}, alpha::Matrix{Float64},
 end # function fuse_uncrd
 
 
-function fuse_uncrd(uavs::Vector{UAV}, alpha::Matrix{Float64}, 
-                    grid::RectangleGrid, utilFn::Function,
-                    quavs::Vector{UAV})
+function fuse_uncrd(quavs::Vector{UAV}, alpha::Matrix{Float64}, 
+                    grid::RectangleGrid, utilFn::Function)
     #=
     Returns the utility fusion uav actions solution via
     a greedy search for policy method, assuming all other
     intruders are white noise intruders.
     =#
-    nuav = length(uavs)
+    nuav = length(quavs)
     dummyActions = zeros(nuav)
     actions = zeros(nuav)
     utils = zeros(nuav)
 
     for iu = 1:nuav
-        iuavs = [uavs[iu], quavs[1:nuav .!= iu]]
+        iuavs = [quavs[iu], quavs[1:nuav .!= iu]]
         action, util = 
             utilFn(1, iuavs, dummyActions, alpha, grid)
         actions[iu] = action
@@ -682,31 +683,22 @@ function fuse_uncrd(uavs::Vector{UAV}, alpha::Matrix{Float64},
 end # function fuse_uncrd
 
 
-function fuse_coord(uavs::Vector{UAV}, alpha::Matrix{Float64}, 
-                    grid::RectangleGrid, utilFn::Function,
-                    quavs::Vector{UAV})
+function fuse_coord(quavs::Vector{UAV}, alpha::Matrix{Float64}, 
+                    grid::RectangleGrid, utilFn::Function)
     #=
     Returns the utility fusion uav actions solution via
     a search for the best policy based on coordination messages
     from other uavs. Note that each uav still assumes that
     all other uavs are white noise intruders.
     =#
-    nuav = length(uavs)
+    nuav = length(quavs)
     actions = zeros(nuav)
     utils = zeros(nuav)
-
-    # generate each uav's apparent picture of the world
-    appuavs = Array(Vector{UAV}, nuav)
-    for iu = 1:nuav
-        iuavs = deepcopy(quavs)
-        iuavs[iu] = deepcopy(uavs[iu])
-        appuavs[iu] = iuavs
-    end # for iu
 
     # compute what each uav thinks is best for all uavs
     sactions = zeros(nuav, nuav)
     for iu = 1:nuav
-        jactions, _ = jesp(appuavs[iu], alpha, grid, utilFn)
+        jactions, _ = jesp(quavs, alpha, grid, utilFn)
         sactions[:, iu] = jactions
     end # for iu
 
@@ -727,7 +719,7 @@ function fuse_coord(uavs::Vector{UAV}, alpha::Matrix{Float64},
 
         # compute best action
         action, util = 
-            utilFn(iu, appuavs[iu], gactions, alpha, grid, suggest)
+            utilFn(iu, quavs, gactions, alpha, grid, suggest)
         actions[iu] = action
         utils[iu] = util
     end # for iu
@@ -735,21 +727,12 @@ function fuse_coord(uavs::Vector{UAV}, alpha::Matrix{Float64},
 end # function fuse_coord
 
 
-function fuse_distr(uavs::Vector{UAV}, alpha::Matrix{Float64}, 
-                    grid::RectangleGrid, utilFn::Function,
-                    quavs::Vector{UAV})
-    nuav = length(uavs)
+function fuse_distr(quavs::Vector{UAV}, alpha::Matrix{Float64}, 
+                    grid::RectangleGrid, utilFn::Function)
+    nuav = length(quavs)
     actions = zeros(nuav)
     pactions = Inf * ones(nuav)
     utils = zeros(nuav)
-
-    # generate each uav's apparent picture of the world
-    appuavs = Array(Vector{UAV}, nuav)
-    for iu = 1:nuav
-        iuavs = deepcopy(quavs)
-        iuavs[iu] = deepcopy(uavs[iu])
-        appuavs[iu] = iuavs
-    end # for iu
 
     niter = 0
     while pactions != actions && niter < MAX_ITER_JESP
@@ -758,7 +741,7 @@ function fuse_distr(uavs::Vector{UAV}, alpha::Matrix{Float64},
         # compute each uav's best greedy action in parallel
         for iu = 1:nuav
             action, util = 
-                utilFn(iu, appuavs[iu], pactions, alpha, grid)
+                utilFn(iu, quavs, pactions, alpha, grid)
             actions[iu] = action
             utils[iu] = util
         end # for iu
@@ -767,22 +750,24 @@ function fuse_distr(uavs::Vector{UAV}, alpha::Matrix{Float64},
 end # function fuse_distr
 
 
-function quantize(uavs::Vector{UAV})
+function noisify(uavs::Vector{UAV})
     #=
-    Quantizes the state variables of uavs to simulate ACAS messages.
-    Rounds position variables to nearest 50 m and heading variables
-    to nearest 10 deg.
+    Adds noise to the state variables of uavs.
     =#
     quavs = deepcopy(uavs)
     nuav = length(quavs)
     for iu = 1:nuav
-        quavs[iu].state[X] = 50 * round(quavs[iu].state[X] / 50)
-        quavs[iu].state[Y] = 50 * round(quavs[iu].state[Y] / 50)
-        quavs[iu].state[P] = 
-            deg2rad(round(rad2deg(quavs[iu].state[P]), -1))
+        quavs[iu].state[X] += SIGMA_XY * randn()
+        quavs[iu].state[Y] += SIGMA_XY * randn()
+        quavs[iu].state[P] += SIGMA_P * randn()
+        speed = SIGMA_V * randn() + 
+                sqrt(quavs[iu].state[XDOT]^2 + 
+                     quavs[iu].state[YDOT]^2)
+        quavs[iu].state[XDOT] = speed * cos(quavs[iu].state[P])
+        quavs[iu].state[YDOT] = speed * sin(quavs[iu].state[P])
     end # for iu
     return quavs
-end # function quantize
+end # function noisify
 
 
 function utm(uavs::Vector{UAV}, alpha::Matrix{Float64}, 
@@ -793,7 +778,7 @@ function utm(uavs::Vector{UAV}, alpha::Matrix{Float64},
     For UTM-like centralized controller, or ACAS-like coordinated
     controller with perfect information (measurements + messages). 
     =#
-    quavs = quantize(uavs)
+    quavs = noisify(uavs)
     tic()
     actions, _ = jesp(quavs, alpha, grid, utilFn)
     if noise
@@ -810,8 +795,8 @@ function uncrd(uavs::Vector{UAV}, alpha::Matrix{Float64},
     for all other uavs using utility fusion (no coordination). For
     ACAS-like uncoordinated controller with quantized state messages.
     =#
-    quavs = quantize(uavs)
-    actions, _ = fuse_uncrd(uavs, alpha, grid, utilFn, quavs)
+    quavs = noisify(uavs)
+    actions, _ = fuse_uncrd(quavs, alpha, grid, utilFn)
     if noise
         addnoise!(actions)
     end # if
@@ -826,8 +811,8 @@ function coord(uavs::Vector{UAV}, alpha::Matrix{Float64},
     from all other uavs using utility fusion. For ACAS-like
     coordinated controller with quantized state messages.
     =#
-    quavs = quantize(uavs)
-    actions, _ = fuse_coord(uavs, alpha, grid, utilFn, quavs)
+    quavs = noisify(uavs)
+    actions, _ = fuse_coord(quavs, alpha, grid, utilFn)
     if noise
         addnoise!(actions)
     end # if
@@ -857,8 +842,8 @@ function distr(uavs::Vector{UAV}, alpha::Matrix{Float64},
     Each UAV greedily selects its own action in a distributed
     fashion at each iteration and passes its solution to server.
     =#
-    quavs = quantize(uavs)
-    actions, _ = fuse_distr(uavs, alpha, grid, utilFn, quavs)
+    quavs = noisify(uavs)
+    actions, _ = fuse_distr(quavs, alpha, grid, utilFn)
     if noise
         addnoise!(actions)
     end # if
@@ -887,7 +872,8 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
     utilFnRange = [maxsum, maxmin]
     prange = 0:30:360    
 
-    @manipulate for utilFn = utilFnRange, p = prange
+    @manipulate for iutilFn = 1:length(utilFnRange), p = prange
+        utilFn = utilFnRange[iutilFn]
         function getmap1(x::Float64, y::Float64)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
@@ -912,7 +898,6 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                         zmin = -20, zmax = 20, xbins = 250, ybins = 250,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
-    Plots.Node(L">", -1500, 0, style=string("rotate=",p,",font=\\huge")),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
     Plots.Node(L">", 1250, -600, style="rotate=180,font=\\huge")], 
                       width="9cm", height="8cm", 
@@ -924,7 +909,6 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                         zmin = -20, zmax = 20, xbins = 250, ybins = 250,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
-    Plots.Node(L">", -1500, 0, style=string("rotate=",p,",font=\\huge")),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
     Plots.Node(L">", 1250, -600, style="rotate=180,font=\\huge")], 
                       width="9cm", height="8cm", 
@@ -935,7 +919,6 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             Plots.Image(getmap3, (-3000, 3000), (-3000, 3000), 
                         zmin = -20, zmax = 20, xbins = 250, ybins = 250,
                         colormap = ColorMaps.Named("RdBu")),
-    Plots.Node(L">", -1500, 0, style=string("rotate=",p,",font=\\huge")),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
     Plots.Node(L">", 1250, -600, style="rotate=180,font=\\huge")], 
             width="9cm", height="8cm", 
@@ -1060,7 +1043,8 @@ function sim_trajs!(uavs::Vector{UAV}, actions::Vector{Float64},
     # generate pid policies
     pids = Array(Function, nuavs)
     for iu = 1:nuavs
-        pids[iu] = pid_policy(actions[iu])
+        # add noise to bank angle commanded
+        pids[iu] = pid_policy(actions[iu] + SIGMA_B * randn())
     end # for iu
 
     # simulate trajectories
@@ -1123,58 +1107,61 @@ function stress!(policy::Function, utilFn::Function, noise::Bool, nt::Int64,
 end # function stress!
 
 function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64, 
-                   alpha::Matrix{Float64}, g::RectangleGrid)
-    print("beginning stress tests...\n")
-    maxminNLMS = zeros(Int64, 5, length(nuavs))
-    maxsumNLMS = zeros(Int64, 5, length(nuavs))
-    maxminNLMSBool = zeros(Int64, 5, length(nuavs))
-    maxsumNLMSBool = zeros(Int64, 5, length(nuavs))
-    maxminTimes = zeros(Float64, 5, length(nuavs))
-    maxsumTimes = zeros(Float64, 5, length(nuavs))
+                   alpha::Matrix{Float64}, g::RectangleGrid,
+                   nbulk::Int64=1)
+    for ibulk = 1:nbulk
+        print("beginning stress tests...\n")
+        maxminNLMS = zeros(Int64, 5, length(nuavs))
+        maxsumNLMS = zeros(Int64, 5, length(nuavs))
+        maxminNLMSBool = zeros(Int64, 5, length(nuavs))
+        maxsumNLMSBool = zeros(Int64, 5, length(nuavs))
+        maxminTimes = zeros(Float64, 5, length(nuavs))
+        maxsumTimes = zeros(Float64, 5, length(nuavs))
 
-    for inu = 1:length(nuavs)
-        tic()
-        nu = nuavs[inu]
-        uavs = randuavs(nu)
-        
-        for isim = 1:nsim
-            _, n1, c1, t1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
-            _, n2, c2, t2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
-            _, n3, c3, t3 = stress!(coord, maxmin, true, NT, uavs, alpha, g)
-            _, n4, c4, t4 = stress!(naive, maxmin, true, NT, uavs, alpha, g)
-            _, n5, c5, t5 = stress!(distr, maxmin, true, NT, uavs, alpha, g)
-            maxminNLMS[:, inu] += [n1, n2, n3, n4, n5]
-            maxminNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
-            maxminTimes[:, inu] += [t1, t2, t3, t4, t5]
-        end # for isim
-        
-        for isim = 1:nsim
-            _, n1, c1, t1 = stress!(utm, maxsum, true, NT, uavs, alpha, g)
-            _, n2, c2, t2 = stress!(uncrd, maxsum, true, NT, uavs, alpha, g)
-            _, n3, c3, t3 = stress!(coord, maxsum, true, NT, uavs, alpha, g)
-            _, n4, c4, t4 = stress!(naive, maxsum, true, NT, uavs, alpha, g)
-            _, n5, c5, t5 = stress!(distr, maxsum, true, NT, uavs, alpha, g)
-            maxsumNLMS[:, inu] += [n1, n2, n3, n4, n5]
-            maxsumNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
-            maxsumTimes[:, inu] += [t1, t2, t3, t4, t5]
-        end # for isim
+        for inu = 1:length(nuavs)
+            tic()
+            nu = nuavs[inu]
+            uavs = randuavs(nu)
+            
+            for isim = 1:nsim
+                _, n1, c1, t1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
+                _, n2, c2, t2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
+                _, n3, c3, t3 = stress!(coord, maxmin, true, NT, uavs, alpha, g)
+                _, n4, c4, t4 = stress!(naive, maxmin, true, NT, uavs, alpha, g)
+                _, n5, c5, t5 = stress!(distr, maxmin, true, NT, uavs, alpha, g)
+                maxminNLMS[:, inu] += [n1, n2, n3, n4, n5]
+                maxminNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
+                maxminTimes[:, inu] += [t1, t2, t3, t4, t5]
+            end # for isim
+            
+            for isim = 1:nsim
+                _, n1, c1, t1 = stress!(utm, maxsum, true, NT, uavs, alpha, g)
+                _, n2, c2, t2 = stress!(uncrd, maxsum, true, NT, uavs, alpha, g)
+                _, n3, c3, t3 = stress!(coord, maxsum, true, NT, uavs, alpha, g)
+                _, n4, c4, t4 = stress!(naive, maxsum, true, NT, uavs, alpha, g)
+                _, n5, c5, t5 = stress!(distr, maxsum, true, NT, uavs, alpha, g)
+                maxsumNLMS[:, inu] += [n1, n2, n3, n4, n5]
+                maxsumNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
+                maxsumTimes[:, inu] += [t1, t2, t3, t4, t5]
+            end # for isim
 
-        maxminTimes /= nsim
-        maxsumTimes /= nsim
-        @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
-        print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
-        print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
-        print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
-        print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
-        print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
-        print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
-    end # for inu
+            maxminTimes /= nsim
+            maxsumTimes /= nsim
+            @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
+            print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
+            print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
+            print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
+            print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
+            print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
+            print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
+        end # for inu
 
-    outfile = string("../data/results.jld")
-    save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
-         "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
-         "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes)
-    println("Results saved to ", outfile)
+        outfile = string("../data/results-", ibulk, ".jld")
+        save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
+             "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
+             "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes)
+        println("Results saved to ", outfile)
+    end # for ibulk
 end # function bulk_test
 
 end # module Multiagent

@@ -161,7 +161,8 @@ function viz_pairwise_policy(d::DoubleUAV)
         
         g = GroupPlot(2, 1, groupStyle = "horizontal sep=3cm")
         push!(g, Axis([
-            Plots.Image(get_heat1, (-2000, 2000), (-2000, 2000),
+            Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)),
                         xbins = 250, ybins = 250,
                         zmin = rad2deg(minimum(actions)), 
                         zmax = rad2deg(maximum(actions)),
@@ -170,7 +171,8 @@ function viz_pairwise_policy(d::DoubleUAV)
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
             ], width="10cm", height="10cm", xlabel="x (m)", ylabel="y (m)", title="Ownship action"))
         push!(g, Axis([
-            Plots.Image(get_heat2, (-2000, 2000), (-2000, 2000), 
+            Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)),
                         xbins = 250, ybins = 250,
                         zmin = rad2deg(minimum(actions)), 
                         zmax = rad2deg(maximum(actions)),
