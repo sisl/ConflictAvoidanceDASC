@@ -148,6 +148,9 @@ function viz_pairwise_policy(d::DoubleUAV)
             action, _ = evaluate(policy, get_belief(
                 [x, y, deg2rad(p), v0, v1], grid
             ))
+            if abs(action[1]) > 0.5
+                return 0.0
+            end # if
             return rad2deg(action[1])
         end # function get_heat1
         
@@ -156,26 +159,27 @@ function viz_pairwise_policy(d::DoubleUAV)
             action, _ = evaluate(policy, get_belief(
                 [x, y, deg2rad(p), v0, v1], grid
             ))
+            if abs(action[2]) > 0.5
+                return 0.0
+            end # if
             return rad2deg(action[2])
         end # function get_heat2
         
         g = GroupPlot(2, 1, groupStyle = "horizontal sep=3cm")
         push!(g, Axis([
             Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
-                        (int(YMIN), int(YMAX)),
-                        xbins = 250, ybins = 250,
-                        zmin = rad2deg(minimum(actions)), 
-                        zmax = rad2deg(maximum(actions)),
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = 150, ybins = 150,
                         colormap = ColorMaps.Named("RdBu"), colorbar = false),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
             ], width="10cm", height="10cm", xlabel="x (m)", ylabel="y (m)", title="Ownship action"))
         push!(g, Axis([
             Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
-                        (int(YMIN), int(YMAX)),
-                        xbins = 250, ybins = 250,
-                        zmin = rad2deg(minimum(actions)), 
-                        zmax = rad2deg(maximum(actions)),
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = 150, ybins = 150,
                         colormap = ColorMaps.Named("RdBu")),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],

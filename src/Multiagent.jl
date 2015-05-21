@@ -30,7 +30,8 @@ const PV2 = 5
 const NPSTATES = size(PROBLEM.pomdp.states, 1)
 const NSTATES = size(PROBLEM.pomdp.states, 2)
 
-const INDIV_ACTIONS = deg2rad(linspace(-20, 20, 5))
+const COC = -1
+const INDIV_ACTIONS = deg2rad([-20, -10, 0, 10, 20, rad2deg(COC)])
 const NINDIV_ACTIONS = length(INDIV_ACTIONS)
 actions = zeros(2, NINDIV_ACTIONS^2)
 iaction = 1
@@ -192,8 +193,6 @@ end # function randuavs
 
 
 function randactions(nuav::Int64)
-    # return [INDIV_ACTIONS[rand(1:length(INDIV_ACTIONS))] 
-    #         for iuav = 1:nuav]
     return [0.0 for iuav = 1:nuav] # for standardization
 end # function randactions
 
@@ -309,7 +308,6 @@ function maxsum(ownship::Int64, uavs::Vector{UAV},
             continue
         end # if
         state = get_pomdp_state(uavs[ownship].state, uavs[iu].state)
-        # beliefs[:, iu] = get_belief(state, grid)
         get_belief!(state, grid, beliefs, iu)
     end # for iu
 
@@ -363,7 +361,6 @@ function maxmin(ownship::Int64, uavs::Vector{UAV},
             continue
         end # if
         state = get_pomdp_state(uavs[ownship].state, uavs[iu].state)
-        # beliefs[:, iu] = get_belief(state, grid)
         get_belief!(state, grid, beliefs, iu)
     end # for iu
 
@@ -420,7 +417,6 @@ function maxsum(iaction::Int64, ownship::Int64, uavs::Vector{UAV},
             continue
         end # if
         state = get_pomdp_state(uavs[ownship].state, uavs[iu].state)
-        # beliefs[:, iu] = get_belief(state, grid)
         get_belief!(state, grid, beliefs, iu)
     end # for iu
     
@@ -467,7 +463,6 @@ function maxmin(iaction::Int64, ownship::Int64, uavs::Vector{UAV},
             continue
         end # if
         state = get_pomdp_state(uavs[ownship].state, uavs[iu].state)
-        # beliefs[:, iu] = get_belief(state, grid)
         get_belief!(state, grid, beliefs, iu)
     end # for iu
    
@@ -877,25 +872,34 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
         function getmap1(x::Float64, y::Float64)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
+            if abs(actions[1]) > 0.5
+                return 0.0
+            end # if
             return rad2deg(actions[1])
         end # function getmap1
         
         function getmap2(x::Float64, y::Float64)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
+            if abs(actions[2]) > 0.5
+                return 0.0
+            end # if
             return rad2deg(actions[2])
         end # function getmap2
 
         function getmap3(x::Float64, y::Float64)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
+            if abs(actions[3]) > 0.5
+                return 0.0
+            end # if
             return rad2deg(actions[3])
         end # function getmap3
 
         g = GroupPlot(3, 1, groupStyle="horizontal sep=1.5cm")
         push!(g, Axis([
             Plots.Image(getmap1, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 250, ybins = 250,
+                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
@@ -906,7 +910,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                       style="xtick={-3000,-2000,...,3000}"))
         push!(g, Axis([
             Plots.Image(getmap2, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 250, ybins = 250,
+                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
@@ -917,7 +921,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                       style="xtick={-3000,-2000,...,3000}"))
         push!(g, Axis([
             Plots.Image(getmap3, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 250, ybins = 250,
+                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
                         colormap = ColorMaps.Named("RdBu")),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
     Plots.Node(L">", 1250, -600, style="rotate=180,font=\\huge")], 
@@ -1011,8 +1015,7 @@ end # function plot_traj
 
 function pid_policy(bankAngle::Float64)
     function policy(t::Float64, state::Vector{Float64})
-        return 2 * WN * (-state[BDOT]) + 
-               WN^2 * (bankAngle - state[B])
+        return 2 * WN * (-state[BDOT]) + WN^2 * (bankAngle - state[B])
     end # function policy
     return policy
 end # function pid_policy
@@ -1043,6 +1046,10 @@ function sim_trajs!(uavs::Vector{UAV}, actions::Vector{Float64},
     # generate pid policies
     pids = Array(Function, nuavs)
     for iu = 1:nuavs
+        # correct COC to 0 degrees nominal turn
+        if abs(actions[iu]) > 0.5
+            actions[iu] = 0.0
+        end # if
         # add noise to bank angle commanded
         pids[iu] = pid_policy(actions[iu] + SIGMA_B * randn())
     end # for iu

@@ -11,7 +11,7 @@ module DoubleUAVs
 
 using POMDPs
 
-export NSTATES, DoubleUAV, get_next_state, get_reward
+export NSTATES, COC, DoubleUAV, get_next_state, get_reward
 
 
 const DT = 5.0              # [s]
@@ -25,15 +25,16 @@ const RBF_INV_VAR = 1 / RBF_STD_DIST^2   # [1/m^2]
 const PEN_ACTION = 0.02
 const PEN_CLOSENESS = 10
 const PEN_MIN_SEP = 1000
+const PEN_CONFLICT = 1      # TODO: vary this and get pareto curve!
 
 const STATE_DIM = 5
 const ACTION_DIM = 2
 
-const X = 1
-const Y = 2
-const P = 3
-const V1 = 4
-const V2 = 5
+const X = 1     # [m] relative x-position
+const Y = 2     # [m] relative y-position
+const P = 3     # [rad] relative heading
+const V1 = 4    # [m/s] ac1 speed
+const V2 = 5    # [m/s] ac2 speed
 
 const XDIM = 11
 const XMIN = -2e3
@@ -57,18 +58,18 @@ ps = linspace(PMIN, PMAX, PDIM)
 vs = linspace(VMIN, VMAX, VDIM)
 
 const NSTATES = XDIM * YDIM * PDIM * VDIM^2 + 1
-states = zeros(STATE_DIM, NSTATES)
+tmp_states = zeros(STATE_DIM, NSTATES)
 istate = 1
 for iv2 = 1:VDIM
     for iv1 = 1:VDIM
         for ip = 1:PDIM
             for iy = 1:YDIM
                 for ix = 1:XDIM
-                    states[X, istate] = xs[ix]
-                    states[Y, istate] = ys[iy]
-                    states[P, istate] = ps[ip]
-                    states[V1, istate] = vs[iv1]
-                    states[V2, istate] = vs[iv2]
+                    tmp_states[X, istate] = xs[ix]
+                    tmp_states[Y, istate] = ys[iy]
+                    tmp_states[P, istate] = ps[ip]
+                    tmp_states[V1, istate] = vs[iv1]
+                    tmp_states[V2, istate] = vs[iv2]
                     istate += 1
                 end # for ix
             end # for iy
@@ -78,10 +79,11 @@ end # for iv2
 
 const TERM_STATE_VAR = 1e5
 const TERM_STATE = TERM_STATE_VAR * ones(STATE_DIM)
-states[:, end] = TERM_STATE
-const STATES_OBSERVATIONS = states
+tmp_states[:, end] = TERM_STATE
+const STATES_OBSERVATIONS = tmp_states
 
-indivActions = deg2rad(linspace(-20, 20, 5))
+const COC = -1
+indivActions = deg2rad([-20, -10, 0, 10, 20, rad2deg(COC)])
 nIndivActions = length(indivActions)
 actions = zeros(2, nIndivActions^2)
 iaction = 1
@@ -94,8 +96,9 @@ for ia2 = 1:nIndivActions
 end # for ia2
 const ACTIONS = actions
 
-const SIGMA_V = 2.0             # [m/s]
-const SIGMA_B = deg2rad(4.0)    # [rad]
+const SIGMA_V = 2.0                 # [m/s]
+const SIGMA_B = deg2rad(4.0)        # [rad]
+const SIGMA_B_COC = deg2rad(10.0)   # [rad]
 const SIGMAS = [0 SIGMA_B -SIGMA_B 0 0 0 0 0 0;
                 0 0 0 SIGMA_B -SIGMA_B 0 0 0 0;
                 0 0 0 0 0 SIGMA_V -SIGMA_V 0 0;
@@ -125,82 +128,93 @@ end # function norm_angle
 
 
 function gen_next_state(dt::Float64 = DT)
-    function get_next_state(state::Vector{Float64}, action::Vector{Float64}, 
-                            sigmas::Matrix{Float64} = SIGMAS, isigma::Int64 = 1)
-        x = state[1]
-        y = state[2]
-        p2 = state[3]
-        v1 = state[4]
-        v2 = state[5]
-
-        b1 = action[1]
-        b2 = action[2]
-
-        # for sigma-point sampling
-        b1 = b1 + sigmas[1, isigma]
-        b2 = b2 + sigmas[2, isigma]
-        v1 = v1 + sigmas[3, isigma]
-        v2 = v2 + sigmas[4, isigma]
-        
+    function get_next_state(state::Vector{Float64}, iaction::Int64, isigma::Int64=1)
         if state[1] == TERM_STATE_VAR
             return TERM_STATE
-        elseif b1 == 0 || b2 == 0 # straight-line path(s)
-            if b2 != 0 # uav1 straight path
-                dp2 = dt * G * tan(b2) / v2
-                r2 = abs(v2^2 / (G * tan(b2)))
-                xr = x + r2 * sign(dp2) * (sin(p2) - sin(p2 - dp2)) - v1 * dt
-                yr = y + r2 * sign(dp2) * (-cos(p2) + cos(p2 - dp2))
-                pr = norm_angle(p2 + dp2)
-                
-                if xr < XMIN || xr > XMAX ||
-                   yr < YMIN || yr > YMAX
-                    return TERM_STATE
-                else
-                    return [xr, yr, pr, v1, v2]
+        else
+            x = state[1]
+            y = state[2]
+            p2 = state[3]
+            v1 = state[4]
+            v2 = state[5]
+
+            b1 = ACTIONS[1, iaction]
+            b2 = ACTIONS[2, iaction]
+
+            # for sigma-point sampling
+            if b1 != COC
+                b1 = b1 + SIGMAS[1, isigma]
+            else 
+                b1 = sign(SIGMAS[1, isigma]) * SIGMA_B_COC
+            end # if
+
+            if b2 != COC
+                b2 = b2 + SIGMAS[2, isigma]
+            else 
+                b2 = sign(SIGMAS[2, isigma]) * SIGMA_B_COC
+            end # if
+
+            v1 = v1 + SIGMAS[3, isigma]
+            v2 = v2 + SIGMAS[4, isigma]
+        
+            if b1 == 0 || b2 == 0 # straight-line path(s)
+                if b2 != 0 # uav1 straight path
+                    dp2 = dt * G * tan(b2) / v2
+                    r2 = abs(v2^2 / (G * tan(b2)))
+                    xr = x + r2 * sign(dp2) * (sin(p2) - sin(p2 - dp2)) - v1 * dt
+                    yr = y + r2 * sign(dp2) * (-cos(p2) + cos(p2 - dp2))
+                    pr = norm_angle(p2 + dp2)
+                    
+                    if xr < XMIN || xr > XMAX ||
+                       yr < YMIN || yr > YMAX
+                        return TERM_STATE
+                    else
+                        return [xr, yr, pr, v1, v2]
+                    end # if
+                elseif b1 != 0 # uav2 straight path
+                    dp1 = dt * G * tan(b1) / v1
+                    r1 = abs(v1^2 / (G * tan(b1)))
+                    x = x + v2 * dt * cos(p2) - r1 * sign(dp1) * sin(dp1)
+                    y = y + v2 * dt * sin(p2) - r1 * sign(dp1) * (cos(dp1) - 1)
+                    xr = x * cos(dp1) + y * sin(dp1)
+                    yr = -x * sin(dp1) + y * cos(dp1)
+                    pr = norm_angle(p2 - dp1)
+                    
+                    if xr < XMIN || xr > XMAX ||
+                       yr < YMIN || yr > YMAX
+                        return TERM_STATE
+                    else
+                        return [xr, yr, pr, v1, v2]
+                    end # if
+                else # both straight paths
+                    xr = x + v2 * dt * cos(p2) - v1 * dt
+                    yr = y + v2 * dt * sin(p2)
+                    pr = norm_angle(p2)
+                    
+                    if xr < XMIN || xr > XMAX ||
+                       yr < YMIN || yr > YMAX
+                        return TERM_STATE
+                    else
+                        return [xr, yr, pr, v1, v2]
+                    end # if
                 end # if
-            elseif b1 != 0 # uav2 straight path
+            else # both curved paths
                 dp1 = dt * G * tan(b1) / v1
+                dp2 = dt * G * tan(b2) / v2
                 r1 = abs(v1^2 / (G * tan(b1)))
-                x = x + v2 * dt * cos(p2) - r1 * sign(dp1) * sin(dp1)
-                y = y + v2 * dt * sin(p2) - r1 * sign(dp1) * (cos(dp1) - 1)
+                r2 = abs(v2^2 / (G * tan(b2)))
+                x = x + r2 * sign(dp2) * (sin(p2) - sin(p2 - dp2)) - r1 * sign(dp1) * sin(dp1)
+                y = y + r2 * sign(dp2) * (-cos(p2) + cos(p2 - dp2)) - r1 * sign(dp1) * (-1 + cos(dp1))
                 xr = x * cos(dp1) + y * sin(dp1)
                 yr = -x * sin(dp1) + y * cos(dp1)
-                pr = norm_angle(p2 - dp1)
-                
-                if xr < XMIN || xr > XMAX ||
-                   yr < YMIN || yr > YMAX
-                    return TERM_STATE
-                else
-                    return [xr, yr, pr, v1, v2]
-                end # if
-            else # both straight paths
-                xr = x + v2 * dt * cos(p2) - v1 * dt
-                yr = y + v2 * dt * sin(p2)
-                pr = norm_angle(p2)
-                
-                if xr < XMIN || xr > XMAX ||
-                   yr < YMIN || yr > YMAX
-                    return TERM_STATE
-                else
-                    return [xr, yr, pr, v1, v2]
-                end # if
-            end # if
-        else # both curved paths
-            dp1 = dt * G * tan(b1) / v1
-            dp2 = dt * G * tan(b2) / v2
-            r1 = abs(v1^2 / (G * tan(b1)))
-            r2 = abs(v2^2 / (G * tan(b2)))
-            x = x + r2 * sign(dp2) * (sin(p2) - sin(p2 - dp2)) - r1 * sign(dp1) * sin(dp1)
-            y = y + r2 * sign(dp2) * (-cos(p2) + cos(p2 - dp2)) - r1 * sign(dp1) * (-1 + cos(dp1))
-            xr = x * cos(dp1) + y * sin(dp1)
-            yr = -x * sin(dp1) + y * cos(dp1)
-            pr = norm_angle(p2 + dp2 - dp1)
+                pr = norm_angle(p2 + dp2 - dp1)
 
-            if xr < XMIN || xr > XMAX ||
-               yr < YMIN || yr > YMAX
-                return TERM_STATE
-            else
-                return [xr, yr, pr, v1, v2]
+                if xr < XMIN || xr > XMAX ||
+                   yr < YMIN || yr > YMAX
+                    return TERM_STATE
+                else
+                    return [xr, yr, pr, v1, v2]
+                end # if
             end # if
         end # if
     end # function get_next_state
@@ -210,16 +224,32 @@ end # function gen_next_state
 
 function gen_reward()
     get_next_state = gen_next_state(DTI)
-    function get_reward(state::Vector{Float64}, action::Vector{Float64})
-        if state[1] == TERM_STATE_VAR
-            return -PEN_ACTION * rad2deg(norm(action))^2
+    function get_reward(state::Vector{Float64}, iaction::Int64)
+        action = ACTIONS[:, iaction]
+
+        reward = 0
+        
+        if action[1] == COC
+            action[1] = 0.0
         else
-            reward = -PEN_ACTION * rad2deg(norm(action))^2
+            reward = -PEN_CONFLICT
+        end # if
+
+        if action[2] == COC
+            action[2] = 0.0
+        else
+            reward = reward - PEN_CONFLICT
+        end # if
+
+        if state[1] == TERM_STATE_VAR
+            return reward - PEN_ACTION * rad2deg(norm(action))^2
+        else
+            reward = reward - PEN_ACTION * rad2deg(norm(action))^2
             
             minSepSq = Inf
             for ti = 1:DT / DTI
                 minSepSq = min(minSepSq, norm(state)^2)
-                state = get_next_state(state, action)
+                state = get_next_state(state, iaction)
             end # for ti
 
             if minSepSq < MIN_SEP_SQ

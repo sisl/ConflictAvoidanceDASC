@@ -63,7 +63,7 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
                 vnext = 0
 
                 for isigma = 1:nSigmas
-                    snext = get_next_state(state, action, sigmas, isigma)
+                    snext = get_next_state(state, iaction, isigma)
                     if snext[1] == TERM_STATE_VAR
                         vnext = vnext + V[end] * weights[isigma]
                     else
@@ -72,7 +72,7 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
                 end # for isigma
 
                 alphaPrev = alpha[istate, iaction]
-                alpha[istate, iaction] = get_reward(state, action) + 
+                alpha[istate, iaction] = get_reward(state, iaction) + 
                                          gamma * vnext
                 residual = residual + (alpha[istate, iaction] - alphaPrev)^2
             end # for iaction
