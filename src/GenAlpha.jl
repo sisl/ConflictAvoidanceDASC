@@ -1,12 +1,7 @@
 using Pairwise, Multiagent
 
 d = get_pomdp()
-lambdas = logspace(-3, 2, 21)
+lambda = readDataSet(ARGS)
 
-println("Starting QMDPs for lambda: ", lambdas)
-for tag = 1:length(lambdas)
-    println("lamba: ", lambdas[tag])
-    gen_pairwise_policy(d, lambdas[tag], tag)
-end # tag
-
-println("We're done generating all policy files!")
+println("Starting QMDPs for lambda = ", lambda)
+# gen_pairwise_policy(d, string("tula", lambdas[tag]), tag)
