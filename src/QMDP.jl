@@ -100,7 +100,7 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
 end # function qmdp
 
 
-function qmdp(d::DoubleUAV, lambda::Float64, verbose::Bool=false, 
+function qmdp(d::DoubleUAV, lambda::Float64, verbose::Bool=true, 
               maxIter::Int64=MAX_ITER, gamma::Float64 = GAMMA, 
               alphaTol::Float64=ALPHA_TOL)
     p = d.pomdp
