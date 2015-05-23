@@ -1,8 +1,9 @@
+push!(LOAD_PATH, "../src")
 using Pairwise, Multiagent
 
 # visualize pairwise encounter
 d = get_pomdp()
-gen_pairwise_policy(d)
+gen_pairwise_policy(d, 1.0, "example")
 # viz_pairwise_policy(d)
 
 # load Q(s, a) table and grid

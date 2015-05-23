@@ -11,7 +11,7 @@ module DoubleUAVs
 
 using POMDPs
 
-export NSTATES, COC, DoubleUAV, get_next_state, get_reward
+export NSTATES, COC, DoubleUAV, get_next_state, gen_reward
 
 
 const DT = 5.0              # [s]
@@ -25,30 +25,30 @@ const RBF_INV_VAR = 1 / RBF_STD_DIST^2   # [1/m^2]
 const PEN_ACTION = 0.02
 const PEN_CLOSENESS = 10
 const PEN_MIN_SEP = 1000
-const PEN_CONFLICT = 1      # TODO: vary this and get pareto curve!
+const PEN_CONFLICT = 1.0
 
 const STATE_DIM = 5
 const ACTION_DIM = 2
 
-const X = 1     # [m] relative x-position
-const Y = 2     # [m] relative y-position
-const P = 3     # [rad] relative heading
-const V1 = 4    # [m/s] ac1 speed
-const V2 = 5    # [m/s] ac2 speed
+const X = 1                 # [m] relative x-position
+const Y = 2                 # [m] relative y-position
+const P = 3                 # [rad] relative heading
+const V1 = 4                # [m/s] ac1 speed
+const V2 = 5                # [m/s] ac2 speed
 
-const XDIM = 11
+const XDIM = 51
 const XMIN = -2e3
 const XMAX = 2e3
 
-const YDIM = 11
+const YDIM = 51
 const YMIN = -2e3
 const YMAX = 2e3
 
-const PDIM = 5
+const PDIM = 37
 const PMIN = 0.0
 const PMAX = 2 * pi
 
-const VDIM = 2
+const VDIM = 3
 const VMIN = 10
 const VMAX = 20
 
@@ -222,7 +222,7 @@ function gen_next_state(dt::Float64 = DT)
 end # function gen_next_state
 
 
-function gen_reward()
+function gen_reward(pen_conflict::Float64=PEN_CONFLICT)
     get_next_state = gen_next_state(DTI)
     function get_reward(state::Vector{Float64}, iaction::Int64)
         action = ACTIONS[:, iaction]
@@ -232,13 +232,13 @@ function gen_reward()
         if action[1] == COC
             action[1] = 0.0
         else
-            reward = -PEN_CONFLICT
+            reward = -pen_conflict
         end # if
 
         if action[2] == COC
             action[2] = 0.0
         else
-            reward = reward - PEN_CONFLICT
+            reward = reward - pen_conflict
         end # if
 
         if state[1] == TERM_STATE_VAR
@@ -265,6 +265,5 @@ end # function gen_reward
 
 
 get_next_state = gen_next_state(DT)
-get_reward = gen_reward()
 
 end # module DoubleUAVs

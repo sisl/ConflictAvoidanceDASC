@@ -40,12 +40,14 @@ function get_pomdp()
 end # function get_pomdp
 
 
-function gen_pairwise_policy(d::DoubleUAV, saveAlpha::Bool = true)
-    alpha = qmdp(d)
+function gen_pairwise_policy(d::DoubleUAV, lambda::Float64, 
+                             filetag::Int64, saveAlpha::Bool=true)
+    alpha = qmdp(d, lambda)
     if saveAlpha
         @printf("Writing alpha vector to %s...", ALPHA_FILE)
         tic()
-        save(ALPHA_FILE, ALPHA_VARIABLE, alpha)
+        filename = string("../data/alpha-", filetag, ".jld")
+        save(filename, ALPHA_VARIABLE, alpha)
         @printf("done in %.2e.\n\n", toq())
     end # if
     return Policy(alpha, d.pomdp.actions)
@@ -149,7 +151,7 @@ function viz_pairwise_policy(d::DoubleUAV)
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[1]) > 0.5
-                return 0.0
+                return -2.0
             end # if
             return rad2deg(action[1])
         end # function get_heat1
@@ -160,7 +162,7 @@ function viz_pairwise_policy(d::DoubleUAV)
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[2]) > 0.5
-                return 0.0
+                return -2.0
             end # if
             return rad2deg(action[2])
         end # function get_heat2

@@ -35,7 +35,7 @@ end # function get_max_alphas!
 
 function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64}, 
               weights::Vector{Float64}, verbose::Bool, maxIter::Int64, 
-              gamma::Float64, alphaTol::Float64)
+              gamma::Float64, alphaTol::Float64, lambda::Float64)
     nStates = size(states, 2)
     nActions = size(actions, 2)
     nSigmas = size(sigmas, 2)
@@ -46,8 +46,10 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
                       sort(unique(vec(states[5, 1:end - 1]))))
     alpha = zeros(nStates, nActions)
     V = zeros(nStates)
-    
+    get_reward = gen_reward(lambda)
+
     @printf("Running QMDP alpha vectors approximation...\n")
+    println("lambda = ", lamdba)
     cputime = 0
     for iter = 1:maxIter
         tic()
@@ -92,16 +94,18 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
                     "solution may be inaccurate")
         end # if
     end # for iter
-    @printf("QMDP computations done!\ncputime = %.2e sec\n\n", cputime)
+    print("lambda = ", lambda, ": ")
+    @printf("QMDP done!\ncputime = %.2e sec\n\n", cputime)
     return alpha
 end # function qmdp
 
 
-function qmdp(d::DoubleUAV, verbose::Bool = false, maxIter::Int64 = MAX_ITER, 
-              gamma::Float64 = GAMMA, alphaTol::Float64 = ALPHA_TOL)
+function qmdp(d::DoubleUAV, lambda::Float64, verbose::Bool=false, 
+              maxIter::Int64=MAX_ITER, gamma::Float64 = GAMMA, 
+              alphaTol::Float64=ALPHA_TOL)
     p = d.pomdp
     alpha = qmdp(p.states, p.actions, d.sigmas, d.weights, verbose, maxIter, 
-                 gamma, alphaTol)
+                 gamma, alphaTol, lambda)
     return alpha
 end # function qmdp
 

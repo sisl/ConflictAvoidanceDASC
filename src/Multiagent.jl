@@ -517,7 +517,7 @@ function greedy(uavs::Vector{UAV}, alpha::Matrix{Float64},
     =#
     nuav = length(uavs)
     closest = zeros(Int64, nuav)
-    actions = zeros(nuav)
+    actions = COC * ones(nuav)
     # ranges = Array(Vector{Float64}, nuav)
     utils = zeros(nuav)
 
@@ -553,7 +553,7 @@ function greedy(uavs::Vector{UAV}, alpha::Matrix{Float64},
     =#
     nuav = length(uavs)
     closest = zeros(Int64, nuav)
-    actions = zeros(nuav)
+    actions = COC * ones(nuav)
     # ranges = Array(Vector{Float64}, nuav)
     utils = zeros(nuav)
 
@@ -587,7 +587,7 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
     =#
     nuav = length(uavs)
     
-    actions = zeros(nuav)
+    actions = COC * ones(nuav)
     
     prevActions = Inf * ones(nuav)
     utils = -Inf * ones(nuav)
@@ -641,8 +641,8 @@ function fuse_uncrd(uavs::Vector{UAV}, alpha::Matrix{Float64},
     intruders are white noise intruders.
     =#
     nuav = length(uavs)
-    dummyActions = zeros(nuav)
-    actions = zeros(nuav)
+    dummyActions = COC * ones(nuav)
+    actions = COC * ones(nuav)
     utils = zeros(nuav)
 
     for iu = 1:nuav
@@ -663,8 +663,8 @@ function fuse_uncrd(quavs::Vector{UAV}, alpha::Matrix{Float64},
     intruders are white noise intruders.
     =#
     nuav = length(quavs)
-    dummyActions = zeros(nuav)
-    actions = zeros(nuav)
+    dummyActions = COC * ones(nuav)
+    actions = COC * ones(nuav)
     utils = zeros(nuav)
 
     for iu = 1:nuav
@@ -687,11 +687,11 @@ function fuse_coord(quavs::Vector{UAV}, alpha::Matrix{Float64},
     all other uavs are white noise intruders.
     =#
     nuav = length(quavs)
-    actions = zeros(nuav)
+    actions = COC * ones(nuav)
     utils = zeros(nuav)
 
     # compute what each uav thinks is best for all uavs
-    sactions = zeros(nuav, nuav)
+    sactions = COC * ones(nuav)
     for iu = 1:nuav
         jactions, _ = jesp(quavs, alpha, grid, utilFn)
         sactions[:, iu] = jactions
@@ -725,7 +725,7 @@ end # function fuse_coord
 function fuse_distr(quavs::Vector{UAV}, alpha::Matrix{Float64}, 
                     grid::RectangleGrid, utilFn::Function)
     nuav = length(quavs)
-    actions = zeros(nuav)
+    actions = COC * ones(nuav)
     pactions = Inf * ones(nuav)
     utils = zeros(nuav)
 
@@ -864,7 +864,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
     set_scenario!(2, uavs, [1250, 600, deg2rad(180)])
     set_scenario!(3, uavs, [1250, -600, deg2rad(180)])
 
-    utilFnRange = [maxsum, maxmin]
+    utilFnRange = [maxmin, maxsum]
     prange = 0:30:360    
 
     @manipulate for iutilFn = 1:length(utilFnRange), p = prange
@@ -873,7 +873,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[1]) > 0.5
-                return 0.0
+                return -2.0
             end # if
             return rad2deg(actions[1])
         end # function getmap1
@@ -882,7 +882,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[2]) > 0.5
-                return 0.0
+                return -2.0
             end # if
             return rad2deg(actions[2])
         end # function getmap2
@@ -891,7 +891,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[3]) > 0.5
-                return 0.0
+                return -2.0
             end # if
             return rad2deg(actions[3])
         end # function getmap3
@@ -1084,12 +1084,23 @@ function gaussnoise(mu::Float64=MU, sigma::Float64=SIGMA)
 end # function gaussnoise
 
 
-function addnoise!(actions::Vector{Float64}, 
-                   noise::Function=gaussnoise)
+function addnoise!(actions::Vector{Float64}, noise::Function=gaussnoise)
     for iu = 1:length(actions)
         actions[iu] += noise()
     end # for iu
 end # function addnoise!
+
+
+function compute_alerts!(alerts::BitArray{1}, actions::Vector{Float64})
+    alertcount = 0
+    for iaction = 1:length(actions)
+        if abs(actions[iaction]) > 0.5
+            alerts[iaction] = true
+            alertcount += 1
+        end # if
+    end # for action
+    return alertcount
+end # function compute_alerts!
 
 
 function stress!(policy::Function, utilFn::Function, noise::Bool, nt::Int64, 
@@ -1101,16 +1112,19 @@ function stress!(policy::Function, utilFn::Function, noise::Bool, nt::Int64,
     dtcounts = ones(Int64, nuav)
     conflicts = falses(nuav, nuav)
     avgtime = 0
+    alerts = falses(nuav)
+    alertcounts = 0
 
     for it = 1:nt
         tic()
         actions = policy(uavs, alpha, grid, utilFn, noise)
+        alertcounts += compute_alerts!(alerts, actions)
         avgtime += toq()
         nlms += sim_trajs!(uavs, actions, dtcounts, trajs, conflicts)
     end # for it
     avgtime /= nt
 
-    return trajs, nlms, conflicts, avgtime
+    return trajs, nlms, conflicts, avgtime, alerts, alertcounts
 end # function stress!
 
 function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64, 
@@ -1124,6 +1138,10 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
         maxsumNLMSBool = zeros(Int64, 5, length(nuavs))
         maxminTimes = zeros(Float64, 5, length(nuavs))
         maxsumTimes = zeros(Float64, 5, length(nuavs))
+        maxminAlerts = zeros(Int64, 5, length(nuavs))
+        maxsumAlerts = zeros(Int64, 5, length(nuavs))
+        maxminAlertsCount = zeros(Int64, 5, length(nuavs))
+        maxsumAlertsCount = zeros(Int64, 5, length(nuavs))
 
         for inu = 1:length(nuavs)
             tic()
@@ -1131,25 +1149,29 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
             uavs = randuavs(nu)
             
             for isim = 1:nsim
-                _, n1, c1, t1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
-                _, n2, c2, t2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
-                _, n3, c3, t3 = stress!(coord, maxmin, true, NT, uavs, alpha, g)
-                _, n4, c4, t4 = stress!(naive, maxmin, true, NT, uavs, alpha, g)
-                _, n5, c5, t5 = stress!(distr, maxmin, true, NT, uavs, alpha, g)
+                _, n1, c1, t1, a1, as1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
+                _, n2, c2, t2, a2, as2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
+                _, n3, c3, t3, a3, as3 = stress!(coord, maxmin, true, NT, uavs, alpha, g)
+                _, n4, c4, t4, a4, as4 = stress!(naive, maxmin, true, NT, uavs, alpha, g)
+                _, n5, c5, t5, a5, as5 = stress!(distr, maxmin, true, NT, uavs, alpha, g)
                 maxminNLMS[:, inu] += [n1, n2, n3, n4, n5]
                 maxminNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
                 maxminTimes[:, inu] += [t1, t2, t3, t4, t5]
+                maxminAlerts[:, inu] += [sum(a1), sum(a2), sum(a3), sum(a4), sum(a5)]
+                maxminAlertsCount[:, inu] += [as1, as2, as3, as4, as5]
             end # for isim
             
             for isim = 1:nsim
-                _, n1, c1, t1 = stress!(utm, maxsum, true, NT, uavs, alpha, g)
-                _, n2, c2, t2 = stress!(uncrd, maxsum, true, NT, uavs, alpha, g)
-                _, n3, c3, t3 = stress!(coord, maxsum, true, NT, uavs, alpha, g)
-                _, n4, c4, t4 = stress!(naive, maxsum, true, NT, uavs, alpha, g)
-                _, n5, c5, t5 = stress!(distr, maxsum, true, NT, uavs, alpha, g)
+                _, n1, c1, t1, a1, as1 = stress!(utm, maxsum, true, NT, uavs, alpha, g)
+                _, n2, c2, t2, a2, as2 = stress!(uncrd, maxsum, true, NT, uavs, alpha, g)
+                _, n3, c3, t3, a3, as3 = stress!(coord, maxsum, true, NT, uavs, alpha, g)
+                _, n4, c4, t4, a4, as4 = stress!(naive, maxsum, true, NT, uavs, alpha, g)
+                _, n5, c5, t5, a5, as5 = stress!(distr, maxsum, true, NT, uavs, alpha, g)
                 maxsumNLMS[:, inu] += [n1, n2, n3, n4, n5]
                 maxsumNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
                 maxsumTimes[:, inu] += [t1, t2, t3, t4, t5]
+                maxsumAlerts[:, inu] += [sum(a1), sum(a2), sum(a3), sum(a4), sum(a5)]
+                maxsumAlertsCount[:, inu] += [as1, as2, as3, as4, as5]
             end # for isim
 
             maxminTimes /= nsim
@@ -1157,16 +1179,22 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
             @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
             print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
             print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
+            print("maxmin alerts: ", vec(maxminAlertsCount[:, inu]), "\n")
+            print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
             print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
             print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
             print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
+            print("maxsum alerts: ", vec(maxsumAlertsCount[:, inu]), "\n")
+            print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
             print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
         end # for inu
 
         outfile = string("../data/results-", ibulk, ".jld")
         save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
              "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
-             "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes)
+             "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes, 
+             "maxminAlerts", maxminAlerts, "maxsumAlerts", maxsumAlerts, 
+             "maxminAlertsCount", maxminAlertsCount, "maxsumAlertsCount", maxsumAlertsCount)
         println("Results saved to ", outfile)
     end # for ibulk
 end # function bulk_test
