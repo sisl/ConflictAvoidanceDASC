@@ -41,7 +41,7 @@ end # function get_pomdp
 
 
 function gen_pairwise_policy(d::DoubleUAV, lambda::Float64, 
-                             filetag::Int64, saveAlpha::Bool=true)
+                             filetag::UTF8String, saveAlpha::Bool=true)
     alpha = qmdp(d, lambda)
     if saveAlpha
         @printf("Writing alpha vector to %s...", ALPHA_FILE)
