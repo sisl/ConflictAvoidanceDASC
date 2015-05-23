@@ -49,7 +49,7 @@ function qmdp(states::Matrix, actions::Matrix, sigmas::Matrix{Float64},
     get_reward = gen_reward(lambda)
 
     @printf("Running QMDP alpha vectors approximation...\n")
-    println("lambda = ", lamdba)
+    println("lambda = ", lambda)
     cputime = 0
     for iter = 1:maxIter
         tic()
