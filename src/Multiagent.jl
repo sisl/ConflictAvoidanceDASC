@@ -1203,7 +1203,7 @@ function bulk_test(nuavs::UnitRange{Int64}, alphafile::ASCIIString,
                    nsim::Int64=1000, nbulk::Int64=10)
     alpha = read_alpha(alphafile)
     for ibulk = 1:nbulk
-        print("beginning stress tests...\n")
+        println("beginning bulk stress test no. ", ibulk)
         maxminNLMS = zeros(Int64, 5, length(nuavs))
         maxsumNLMS = zeros(Int64, 5, length(nuavs))
         maxminNLMSBool = zeros(Int64, 5, length(nuavs))

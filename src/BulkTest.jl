@@ -8,5 +8,5 @@ g = get_grid(d.pomdp.states)
 
 nuavs = 2:10
 nsim = 1000
-
-bulk_test(nuavs, alphafile, g, string("tula", tag), nsim)
+nbulk = 10
+bulk_test(nuavs, alphafile, g, string("tula", tag), nsim, nbulk)
