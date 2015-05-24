@@ -115,13 +115,18 @@ function evaluate(policy::Policy, belief::SparseMatrixCSC{Float64,Int64})
 end # function evaluate
 
 
-function read_policy(actions::Matrix{Float64})
-    alpha = load(ALPHA_FILE, ALPHA_VARIABLE)
+function read_policy(actions::Matrix{Float64}, alphafile::ASCIIString)
+    alpha = load(alphafile, ALPHA_VARIABLE)
     return Policy(alpha, actions)
 end # function read_policy
 
 
-function viz_pairwise_policy(d::DoubleUAV)
+function read_policy(actions::Matrix{Float64}, alpha::Matrix{Float64})
+    return Policy(alpha, actions)
+end # function read_policy
+
+
+function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
     states = d.pomdp.states
     actions = d.pomdp.actions
 
@@ -140,7 +145,77 @@ function viz_pairwise_policy(d::DoubleUAV)
     vend = vs[end]
     vdiv = vs[2] - vs[1]
 
-    policy = read_policy(actions)
+    policy = read_policy(actions, alphafile)
+
+    @manipulate for p = pstart:pdiv:pend, 
+                    v0 = vstart:vdiv:vend, 
+                    v1 = vstart:vdiv:vend
+        # ownship uav
+        function get_heat1(x::Float64, y::Float64)
+            action, _ = evaluate(policy, get_belief(
+                [x, y, deg2rad(p), v0, v1], grid
+            ))
+            if abs(action[1]) > 0.5
+                return -2.0
+            end # if
+            return rad2deg(action[1])
+        end # function get_heat1
+        
+        # intruder uav
+        function get_heat2(x::Float64, y::Float64)
+            action, _ = evaluate(policy, get_belief(
+                [x, y, deg2rad(p), v0, v1], grid
+            ))
+            if abs(action[2]) > 0.5
+                return -2.0
+            end # if
+            return rad2deg(action[2])
+        end # function get_heat2
+        
+        g = GroupPlot(2, 1, groupStyle = "horizontal sep=3cm")
+        push!(g, Axis([
+            Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = 150, ybins = 150,
+                        colormap = ColorMaps.Named("RdBu"), colorbar = false),
+            Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
+            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
+            ], width="10cm", height="10cm", xlabel="x (m)", ylabel="y (m)", title="Ownship action"))
+        push!(g, Axis([
+            Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = 150, ybins = 150,
+                        colormap = ColorMaps.Named("RdBu")),
+            Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
+            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
+            width="10cm", height="10cm", xlabel="x (m)", title="Intruder action"))
+        g
+    end # for p, v0, v1
+end # function viz_pairwise_policy
+
+
+function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
+    states = d.pomdp.states
+    actions = d.pomdp.actions
+
+    xs = sort(unique(vec(states[1, 1:end - 1])))
+    ys = sort(unique(vec(states[2, 1:end - 1])))
+    ps = sort(unique(vec(states[3, 1:end - 1])))
+    vs = sort(unique(vec(states[4, 1:end - 1])))
+    ps_deg = rad2deg(ps)
+    grid = RectangleGrid(xs, ys, ps, vs, vs)
+
+    pstart = ps_deg[1]
+    pend = ps_deg[end]
+    pdiv = ps_deg[2] - ps_deg[1]
+    
+    vstart = vs[1]
+    vend = vs[end]
+    vdiv = vs[2] - vs[1]
+
+    policy = read_policy(actions, alpha)
 
     @manipulate for p = pstart:pdiv:pend, 
                     v0 = vstart:vdiv:vend, 

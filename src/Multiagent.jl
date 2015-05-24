@@ -320,7 +320,7 @@ function maxsum(ownship::Int64, uavs::Vector{UAV},
             end # if
             ia = action_idx(INDIV_ACTIONS[iaction], actions[iu])
             if beliefs[end, iu] == 1
-                if INDIV_ACTIONS[iaction] == 0
+                if INDIV_ACTIONS[iaction] == COC
                     utils[iaction] += 0.0
                 else
                     utils[iaction] += -0.5
@@ -373,7 +373,7 @@ function maxmin(ownship::Int64, uavs::Vector{UAV},
             end # if
             aIdx = action_idx(INDIV_ACTIONS[iaction], actions[iu])
             if beliefs[end, iu] == 1
-                if INDIV_ACTIONS[iaction] == 0
+                if INDIV_ACTIONS[iaction] == COC
                     util = 0.0
                 else
                     util = -0.5
@@ -427,7 +427,7 @@ function maxsum(iaction::Int64, ownship::Int64, uavs::Vector{UAV},
         end # if
         ia = action_idx(INDIV_ACTIONS[iaction], actions[iu])
         if beliefs[end, iu] == 1
-            if INDIV_ACTIONS[iaction] == 0
+            if INDIV_ACTIONS[iaction] == COC
                 util += 0.0
             else
                 util += -0.5
@@ -473,7 +473,7 @@ function maxmin(iaction::Int64, ownship::Int64, uavs::Vector{UAV},
         end # if
         aIdx = action_idx(INDIV_ACTIONS[iaction], actions[iu])
         if beliefs[end, iu] == 1
-            if INDIV_ACTIONS[iaction] == 0
+            if INDIV_ACTIONS[iaction] == COC
                 util = 0.0
             else
                 util = -0.5
@@ -535,7 +535,7 @@ function greedy(uavs::Vector{UAV}, alpha::Matrix{Float64},
     for iu = 1:nuav
         action, util = 
             utilFn(1, [uavs[iu], uavs[closest[iu]]],
-                   zeros(2), alpha, grid)
+                   COC * ones(2), alpha, grid)
         actions[iu] = action
         utils[iu] = util
     end # for iu
@@ -571,7 +571,7 @@ function greedy(uavs::Vector{UAV}, alpha::Matrix{Float64},
     for iu = 1:nuav
         action, util = 
             utilFn(1, [uavs[iu], quavs[closest[iu]]], 
-                   zeros(2), alpha, grid)
+                   COC * ones(2), alpha, grid)
         actions[iu] = action
         utils[iu] = util
     end # for iu
@@ -580,7 +580,7 @@ end # function greedy
 
 
 function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64}, 
-                  grid::RectangleGrid, utilFn::Function)
+              grid::RectangleGrid, utilFn::Function)
     #=
     Returns the utility fusion uav actions solution via
     the joint equilibrium based search for policy method.
