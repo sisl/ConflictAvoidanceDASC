@@ -1,7 +1,7 @@
 using Pairwise, Multiagent
 
-alphafile = string("../data/alpha-tula", ARGS[1], ".jld")
-tag = int(ARGS[2])
+tag = int(ARGS[1])
+alphafile = string("../data/alpha-tula", tag, ".jld")
 
 d = get_pomdp()
 g = get_grid(d.pomdp.states)

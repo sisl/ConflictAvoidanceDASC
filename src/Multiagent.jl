@@ -1200,8 +1200,8 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
 end # function bulk_test
 
 
-function bulk_test(nuavs::UnitRange{Int64}, alphafile::UTF8String, 
-                   g::RectangleGrid, tag::UTF8String, 
+function bulk_test(nuavs::UnitRange{Int64}, alphafile::ASCIIString, 
+                   g::RectangleGrid, tag::ASCIIString, 
                    nsim::Int64=1000, nbulk::Int64=10)
     alpha = read_alpha(alphafile)
     for ibulk = 1:nbulk
