@@ -126,7 +126,7 @@ function read_policy(d::DoubleUAV, filename::ASCIIString)
 end # function read_pol
 
 
-function read_alpha(infile::UTF8String=ALPHA_FILE)
+function read_alpha(infile::ASCIIString=ALPHA_FILE)
     return load(infile, ALPHA_VARIABLE)
 end # function read_alpha
 
