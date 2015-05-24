@@ -64,7 +64,7 @@ const PMAX = 2 * pi
 const VMIN = 10
 const VMAX = 20
 
-const WN = 0.15             # [rad/s]
+const WN = 0.25             # [rad/s]
 const MIN_SEP = 500.0       # [m]
 const MIN_SEP_INIT = 600.0  # [m]
 
@@ -86,7 +86,7 @@ const CONSENSUS_REWARD = 0.5
 const SIGMA_V = 1.0         # [m/s]
 const SIGMA_B = deg2rad(2)  # [rad]
 const SIGMA_P = deg2rad(2)  # [rad]
-const SIGMA_XY = 50         # [m]
+const SIGMA_XY = 25         # [m]
 
 const LARGE_NUMBER = int64(1e9)
 
@@ -774,7 +774,6 @@ function utm(uavs::Vector{UAV}, alpha::Matrix{Float64},
     controller with perfect information (measurements + messages). 
     =#
     quavs = noisify(uavs)
-    tic()
     actions, _ = jesp(quavs, alpha, grid, utilFn)
     if noise
         addnoise!(actions)
@@ -1144,10 +1143,9 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
         maxsumAlertsCount = zeros(Int64, 5, length(nuavs))
 
         for inu = 1:length(nuavs)
-            tic()
             nu = nuavs[inu]
             uavs = randuavs(nu)
-            
+            tic()
             for isim = 1:nsim
                 _, n1, c1, t1, a1, as1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
                 _, n2, c2, t2, a2, as2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
@@ -1177,16 +1175,16 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
             maxminTimes /= nsim
             maxsumTimes /= nsim
             @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
-            print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
+            # print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
             print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
             print("maxmin alerts: ", vec(maxminAlertsCount[:, inu]), "\n")
-            print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
-            print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
-            print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
+            # print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
+            # print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
+            # print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
             print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
             print("maxsum alerts: ", vec(maxsumAlertsCount[:, inu]), "\n")
-            print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
-            print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
+            # print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
+            # print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
         end # for inu
 
         outfile = string("../data/results-", ibulk, ".jld")
@@ -1218,10 +1216,9 @@ function bulk_test(nuavs::UnitRange{Int64}, alphafile::ASCIIString,
         maxsumAlertsCount = zeros(Int64, 5, length(nuavs))
         
         for inu = 1:length(nuavs)
-            tic()
             nu = nuavs[inu]
             uavs = randuavs(nu)
-            
+            tic()
             for isim = 1:nsim
                 _, n1, c1, t1, a1, as1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
                 _, n2, c2, t2, a2, as2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
@@ -1251,16 +1248,16 @@ function bulk_test(nuavs::UnitRange{Int64}, alphafile::ASCIIString,
             maxminTimes /= nsim
             maxsumTimes /= nsim
             @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
-            print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
+            # print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
             print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
             print("maxmin alerts: ", vec(maxminAlertsCount[:, inu]), "\n")
-            print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
-            print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
-            print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
+            # print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
+            # print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
+            # print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
             print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
             print("maxsum alerts: ", vec(maxsumAlertsCount[:, inu]), "\n")
-            print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
-            print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
+            # print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
+            # print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
         end # for inu
 
         outfile = string("../data/results-", tag, "-", ibulk, ".jld")
