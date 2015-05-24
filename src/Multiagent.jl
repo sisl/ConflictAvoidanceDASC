@@ -126,8 +126,8 @@ function read_policy(d::DoubleUAV, filename::ASCIIString)
 end # function read_pol
 
 
-function read_alpha()
-    return load(ALPHA_FILE, ALPHA_VARIABLE)
+function read_alpha(infile::UTF8String=ALPHA_FILE)
+    return load(infile, ALPHA_VARIABLE)
 end # function read_alpha
 
 
@@ -691,7 +691,7 @@ function fuse_coord(quavs::Vector{UAV}, alpha::Matrix{Float64},
     utils = zeros(nuav)
 
     # compute what each uav thinks is best for all uavs
-    sactions = COC * ones(nuav)
+    sactions = COC * ones(nuav, nuav)
     for iu = 1:nuav
         jactions, _ = jesp(quavs, alpha, grid, utilFn)
         sactions[:, iu] = jactions
@@ -1190,6 +1190,80 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
         end # for inu
 
         outfile = string("../data/results-", ibulk, ".jld")
+        save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
+             "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
+             "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes, 
+             "maxminAlerts", maxminAlerts, "maxsumAlerts", maxsumAlerts, 
+             "maxminAlertsCount", maxminAlertsCount, "maxsumAlertsCount", maxsumAlertsCount)
+        println("Results saved to ", outfile)
+    end # for ibulk
+end # function bulk_test
+
+
+function bulk_test(nuavs::UnitRange{Int64}, alphafile::UTF8String, 
+                   g::RectangleGrid, tag::UTF8String, 
+                   nsim::Int64=1000, nbulk::Int64=10)
+    alpha = read_alpha(alphafile)
+    for ibulk = 1:nbulk
+        print("beginning stress tests...\n")
+        maxminNLMS = zeros(Int64, 5, length(nuavs))
+        maxsumNLMS = zeros(Int64, 5, length(nuavs))
+        maxminNLMSBool = zeros(Int64, 5, length(nuavs))
+        maxsumNLMSBool = zeros(Int64, 5, length(nuavs))
+        maxminTimes = zeros(Float64, 5, length(nuavs))
+        maxsumTimes = zeros(Float64, 5, length(nuavs))
+        maxminAlerts = zeros(Int64, 5, length(nuavs))
+        maxsumAlerts = zeros(Int64, 5, length(nuavs))
+        maxminAlertsCount = zeros(Int64, 5, length(nuavs))
+        maxsumAlertsCount = zeros(Int64, 5, length(nuavs))
+        
+        for inu = 1:length(nuavs)
+            tic()
+            nu = nuavs[inu]
+            uavs = randuavs(nu)
+            
+            for isim = 1:nsim
+                _, n1, c1, t1, a1, as1 = stress!(utm, maxmin, true, NT, uavs, alpha, g)
+                _, n2, c2, t2, a2, as2 = stress!(uncrd, maxmin, true, NT, uavs, alpha, g)
+                _, n3, c3, t3, a3, as3 = stress!(coord, maxmin, true, NT, uavs, alpha, g)
+                _, n4, c4, t4, a4, as4 = stress!(naive, maxmin, true, NT, uavs, alpha, g)
+                _, n5, c5, t5, a5, as5 = stress!(distr, maxmin, true, NT, uavs, alpha, g)
+                maxminNLMS[:, inu] += [n1, n2, n3, n4, n5]
+                maxminNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
+                maxminTimes[:, inu] += [t1, t2, t3, t4, t5]
+                maxminAlerts[:, inu] += [sum(a1), sum(a2), sum(a3), sum(a4), sum(a5)]
+                maxminAlertsCount[:, inu] += [as1, as2, as3, as4, as5]
+            end # for isim
+            
+            for isim = 1:nsim
+                _, n1, c1, t1, a1, as1 = stress!(utm, maxsum, true, NT, uavs, alpha, g)
+                _, n2, c2, t2, a2, as2 = stress!(uncrd, maxsum, true, NT, uavs, alpha, g)
+                _, n3, c3, t3, a3, as3 = stress!(coord, maxsum, true, NT, uavs, alpha, g)
+                _, n4, c4, t4, a4, as4 = stress!(naive, maxsum, true, NT, uavs, alpha, g)
+                _, n5, c5, t5, a5, as5 = stress!(distr, maxsum, true, NT, uavs, alpha, g)
+                maxsumNLMS[:, inu] += [n1, n2, n3, n4, n5]
+                maxsumNLMSBool[:, inu] += [sum(c1), sum(c2), sum(c3), sum(c4), sum(c5)]
+                maxsumTimes[:, inu] += [t1, t2, t3, t4, t5]
+                maxsumAlerts[:, inu] += [sum(a1), sum(a2), sum(a3), sum(a4), sum(a5)]
+                maxsumAlertsCount[:, inu] += [as1, as2, as3, as4, as5]
+            end # for isim
+
+            maxminTimes /= nsim
+            maxsumTimes /= nsim
+            @printf("nuavs = %d: cputime = %.2e sec\n", nu, toq())
+            print("maxmin nlms: ", vec(maxminNLMS[:, inu]), "\n")
+            print("maxmin nlms bool: ", vec(maxminNLMSBool[:, inu]), "\n")
+            print("maxmin alerts: ", vec(maxminAlertsCount[:, inu]), "\n")
+            print("maxmin alert bool: ", vec(maxminAlerts[:, inu]), "\n")
+            print("average maxmin times: ", vec(maxminTimes[:, inu]), "\n")
+            print("maxsum nlms: ", vec(maxsumNLMS[:, inu]), "\n")
+            print("maxsum nlms bool: ", vec(maxsumNLMSBool[:, inu]), "\n")
+            print("maxsum alerts: ", vec(maxsumAlertsCount[:, inu]), "\n")
+            print("maxsum alert bool: ", vec(maxsumAlerts[:, inu]), "\n")
+            print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
+        end # for inu
+
+        outfile = string("../data/results-", tag, "-", ibulk, ".jld")
         save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
              "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
              "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes, 
