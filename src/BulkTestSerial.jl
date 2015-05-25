@@ -10,7 +10,7 @@ for tag = 3:11
 
     nuavs = 2:10
     nsim = 1000
-    nbulk = 10
-    bulk_test(nuavs, alphafile, g, string("tula", tag), nsim, nbulk)
+    nbulk = 1
+    bulk_test(nuavs, alphafile, g, string("cheonan", tag), nsim, nbulk)
     println("bulk test serial no. ", tag, "done in ", toq())
 end # for tag
