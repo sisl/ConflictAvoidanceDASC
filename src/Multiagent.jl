@@ -113,7 +113,6 @@ end # function get_qval!
 
 
 function evaluate(policy::Policy, belief::SparseMatrixCSC{Float64,Int64})
-    fill!(policy.qvals, 0.0)
     get_qval!(policy, belief)
     ibest = indmax(policy.qvals)
     return policy.actions[:, ibest], ibest
@@ -602,7 +601,7 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
         netUtil = 0.0
         prevActions = copy(actions)
         
-        jespOrder = randperm(nuav)
+        jespOrder = 1:nuav#randperm(nuav)
         for iu = jespOrder
             action, util = 
                 utilFn(iu, uavs, actions, alpha, grid)
@@ -858,13 +857,13 @@ function set_scenario!(iu::Int64, uavs::Vector{UAV},
 end # function set_scenario
 
 
-function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
+function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid, nbins::Int64)
     uavs = randuavs(3)
     set_scenario!(2, uavs, [1250, 600, deg2rad(180)])
     set_scenario!(3, uavs, [1250, -600, deg2rad(180)])
 
     utilFnRange = [maxmin, maxsum]
-    prange = 0:30:360    
+    prange = 0#:60:360    
 
     @manipulate for iutilFn = 1:length(utilFnRange), p = prange
         utilFn = utilFnRange[iutilFn]
@@ -872,7 +871,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[1]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(actions[1])
         end # function getmap1
@@ -881,7 +880,7 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[2]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(actions[2])
         end # function getmap2
@@ -890,15 +889,15 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
             set_scenario!(1, uavs, [x, y, deg2rad(p)])
             actions, _ = jesp(uavs, alpha, grid, utilFn)
             if abs(actions[3]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(actions[3])
         end # function getmap3
 
         g = GroupPlot(3, 1, groupStyle="horizontal sep=1.5cm")
         push!(g, Axis([
-            Plots.Image(getmap1, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
+            Plots.Image(getmap1, (-2500, 2500), (-2500, 2500), 
+                        zmin = -20, zmax = 20, xbins = nbins, ybins = nbins,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
@@ -908,8 +907,8 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                       title="First aircraft action",
                       style="xtick={-3000,-2000,...,3000}"))
         push!(g, Axis([
-            Plots.Image(getmap2, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
+            Plots.Image(getmap2, (-2500, 2500), (-2500, 2500), 
+                        zmin = -20, zmax = 20, xbins = nbins, ybins = nbins,
                         colormap = ColorMaps.Named("RdBu"), 
                         colorbar = false),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
@@ -919,8 +918,8 @@ function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid)
                       title="Second aircraft action",
                       style="xtick={-3000,-2000,...,3000}"))
         push!(g, Axis([
-            Plots.Image(getmap3, (-3000, 3000), (-3000, 3000), 
-                        zmin = -20, zmax = 20, xbins = 150, ybins = 150,
+            Plots.Image(getmap3, (-2500, 2500), (-2500, 2500), 
+                        zmin = -20, zmax = 20, xbins = nbins, ybins = nbins,
                         colormap = ColorMaps.Named("RdBu")),
     Plots.Node(L">", 1250, 600, style="rotate=180,font=\\huge"),
     Plots.Node(L">", 1250, -600, style="rotate=180,font=\\huge")], 

@@ -126,7 +126,7 @@ function read_policy(actions::Matrix{Float64}, alpha::Matrix{Float64})
 end # function read_policy
 
 
-function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
+function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE, nbin::Int64=250)
     states = d.pomdp.states
     actions = d.pomdp.actions
 
@@ -156,7 +156,7 @@ function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[1]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(action[1])
         end # function get_heat1
@@ -167,7 +167,7 @@ function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[2]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(action[2])
         end # function get_heat2
@@ -177,7 +177,7 @@ function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
             Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
                         (int(YMIN), int(YMAX)), 
                         zmin = -20, zmax = 20,
-                        xbins = 150, ybins = 150,
+                        xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu"), colorbar = false),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
@@ -186,7 +186,7 @@ function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
             Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
                         (int(YMIN), int(YMAX)), 
                         zmin = -20, zmax = 20,
-                        xbins = 150, ybins = 150,
+                        xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu")),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
@@ -196,7 +196,7 @@ function viz_pairwise_policy(d::DoubleUAV, alphafile::ASCIIString=ALPHA_FILE)
 end # function viz_pairwise_policy
 
 
-function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
+function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64}, nbin::Int64=250)
     states = d.pomdp.states
     actions = d.pomdp.actions
 
@@ -226,7 +226,7 @@ function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[1]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(action[1])
         end # function get_heat1
@@ -237,7 +237,7 @@ function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
                 [x, y, deg2rad(p), v0, v1], grid
             ))
             if abs(action[2]) > 0.5
-                return -2.0
+                return 2.0
             end # if
             return rad2deg(action[2])
         end # function get_heat2
@@ -247,7 +247,7 @@ function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
             Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
                         (int(YMIN), int(YMAX)), 
                         zmin = -20, zmax = 20,
-                        xbins = 150, ybins = 150,
+                        xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu"), colorbar = false),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
@@ -256,7 +256,7 @@ function viz_pairwise_policy(d::DoubleUAV, alpha::Matrix{Float64})
             Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
                         (int(YMIN), int(YMAX)), 
                         zmin = -20, zmax = 20,
-                        xbins = 150, ybins = 150,
+                        xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu")),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
