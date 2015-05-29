@@ -64,7 +64,7 @@ const PMAX = 2 * pi
 const VMIN = 10
 const VMAX = 20
 
-const WN = 0.25             # [rad/s]
+const WN = 0.20             # [rad/s]
 const MIN_SEP = 500.0       # [m]
 const MIN_SEP_INIT = 600.0  # [m]
 
