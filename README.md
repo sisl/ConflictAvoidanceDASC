@@ -1,6 +1,6 @@
 # Short-Term Conflict Avoidance for Unmanned Aircraft Traffic Management
 
-This directory contains the supplement code for the paper titled "Short-Term Conflict Avoidance for Unmanned Aircraft Traffic Management" by Hao Yi Ong and Mykel J. Kochenderfer, submitted to the 2015 Digital Avionics Systems Conference. 
+This directory contains the supplement code for the paper titled "Short-Term Conflict Avoidance for Unmanned Aircraft Traffic Management" by Hao Yi Ong and Mykel J. Kochenderfer, to appear in the 2015 Digital Avionics Systems Conference. 
 
 Here you will find implementations of the following:
 * Pairwise encounter policy generation and visualization
