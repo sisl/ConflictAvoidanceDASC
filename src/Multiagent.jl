@@ -53,7 +53,6 @@ const DIM_ACTIONS = 2
 const DIM_POMDP_STATES = 5
 const DIM_STATES = 8        # TYPE_SIMPLE state dimensionality
 const TERM_STATE = 1e5 * ones(DIM_POMDP_STATES)
-const TERM_STATE_REAL = 1e5 * ones(DIM_STATES)
 
 const XMIN = -2e3
 const XMAX = 2e3
@@ -89,40 +88,6 @@ const SIGMA_P = deg2rad(2)  # [rad]
 const SIGMA_XY = 25         # [m]
 
 const LARGE_NUMBER = int64(1e9)
-
-
-type Policy
-    alpha :: Matrix{Float64}
-    actions :: Matrix{Float64}
-    nactions :: Int64
-    qvals :: Vector{Float64}
-    function Policy(alpha::Matrix{Float64}, actions::Matrix{Float64})
-        return new(alpha, actions, size(actions, 2), zeros(size(actions, 2)))
-    end # function Policy
-end
-
-
-function get_qval!(policy::Policy, belief::SparseMatrixCSC{Float64, Int64})
-    fill!(policy.qvals, 0.0)
-    for iaction in 1:policy.nactions
-        for ib in 1:length(belief.rowval)
-            policy.qvals[iaction] += belief.nzval[ib] * policy.alpha[belief.rowval[ib], iaction]
-        end # for b
-    end # for iaction
-end # function get_qval!
-
-
-function evaluate(policy::Policy, belief::SparseMatrixCSC{Float64,Int64})
-    get_qval!(policy, belief)
-    ibest = indmax(policy.qvals)
-    return policy.actions[:, ibest], ibest
-end # function evaluate
-
-
-function read_policy(d::DoubleUAV, filename::ASCIIString)
-    alpha = load(ALPHA_FILE, ALPHA_VARIABLE)
-    return Policy(alpha, d.pomdp.actions)
-end # function read_pol
 
 
 function read_alpha(infile::ASCIIString=ALPHA_FILE)
@@ -217,8 +182,7 @@ function get_pomdp_state(s1::Vector{Float64}, s2::Vector{Float64})
     v2 = sqrt(s2[XDOT]^2 + s2[YDOT]^2)
 
     if xr < XMIN || xr > XMAX ||
-       yr < YMIN || yr > YMAX ||
-       s1 == TERM_STATE_REAL || s2 == TERM_STATE_REAL
+       yr < YMIN || yr > YMAX
         return TERM_STATE
     else
         return [xr, yr, pr, v1, v2]
@@ -598,10 +562,9 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
     solutionImproving = false
 
     while niter < MAX_ITER_JESP
-        netUtil = 0.0
         prevActions = copy(actions)
         
-        jespOrder = 1:nuav#randperm(nuav)
+        jespOrder = randperm(nuav)
         for iu = jespOrder
             action, util = 
                 utilFn(iu, uavs, actions, alpha, grid)

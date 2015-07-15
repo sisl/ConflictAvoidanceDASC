@@ -13,7 +13,6 @@ const DIM_POMDP_STATES = 5
 const DIM_STATES = 8
 const TERM_STATE_VAR = 1e5
 const TERM_STATE = TERM_STATE_VAR * ones(DIM_POMDP_STATES)
-const TERM_STATE_REAL = TERM_STATE_VAR * ones(DIM_STATES)
 
 const XMIN = -2e3
 const XMAX = 2e3
