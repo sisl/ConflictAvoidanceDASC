@@ -804,7 +804,7 @@ function distr(uavs::Vector{UAV}, alpha::Matrix{Float64},
         addnoise!(actions)
     end # if
     return actions
-end # function naive
+end # function distr
 
 
 function set_scenario!(iu::Int64, uavs::Vector{UAV}, 

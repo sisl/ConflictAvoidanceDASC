@@ -4,5 +4,6 @@
 BulkTest.jl
 BulkTestSerial.jl
 GenAlpha.jl
-GenPlots.ipynb
+GenPlots*.ipynb
 *ACAS.jl
+*ACAS.ipynb
