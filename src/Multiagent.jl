@@ -559,9 +559,10 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
     bestActions = copy(actions)
     
     niter = 0
-    solutionImproving = false
+    solutionImproving = true
 
-    while niter < MAX_ITER_JESP
+    while niter < MAX_ITER_JESP && solutionImproving
+        solutionImproving = false
         prevActions = copy(actions)
         
         jespOrder = randperm(nuav)
@@ -574,23 +575,16 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
             if bestUtil < sum(utils)
                 bestUtil = sum(utils)
                 bestActions = copy(actions)
-                if iu == jespOrder[end]
-                    solutionImproving = true
-                end # if
-            else
-                solutionImproving = false
+                solutionImproving = true
             end # if
         end
-
-        if !solutionImproving
-            break
-        end # if
 
         niter += 1
         if niter == MAX_ITER_JESP
             print("Max iter reached, check solution\n")
         end # if
     end # while
+
     return bestActions, bestUtil, niter
 end # function jesp
 
