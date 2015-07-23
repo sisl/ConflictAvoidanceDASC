@@ -61,7 +61,7 @@ const YMAX = 2e3
 const PMIN = 0.0
 const PMAX = 2 * pi
 const VMIN = 10
-const VMAX = 20
+const VMAX = 10#20
 
 const WN = 0.20             # [rad/s]
 const MIN_SEP = 500.0       # [m]
@@ -814,7 +814,7 @@ function set_scenario!(iu::Int64, uavs::Vector{UAV},
 end # function set_scenario
 
 
-function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid, nbins::Int64)
+function viz_policy(alpha::Matrix{Float64}, grid::RectangleGrid, nbins::Int64=100)
     uavs = randuavs(3)
     set_scenario!(2, uavs, [1250, 600, deg2rad(180)])
     set_scenario!(3, uavs, [1250, -600, deg2rad(180)])
