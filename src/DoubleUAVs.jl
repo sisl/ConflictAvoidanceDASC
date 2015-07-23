@@ -36,15 +36,15 @@ const P = 3                 # [rad] relative heading
 const V1 = 4                # [m/s] ac1 speed
 const V2 = 5                # [m/s] ac2 speed
 
-const XDIM = 51
+const XDIM = 11
 const XMIN = -2e3
 const XMAX = 2e3
 
-const YDIM = 51
+const YDIM = 11
 const YMIN = -2e3
 const YMAX = 2e3
 
-const PDIM = 37
+const PDIM = 5
 const PMIN = 0.0
 const PMAX = 2 * pi
 
