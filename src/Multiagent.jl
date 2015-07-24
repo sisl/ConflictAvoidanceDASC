@@ -552,7 +552,6 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
     
     actions = COC * ones(nuav)
     
-    prevActions = Inf * ones(nuav)
     utils = -Inf * ones(nuav)
     
     bestUtil = -Inf
@@ -563,7 +562,6 @@ function jesp(uavs::Vector{UAV}, alpha::Matrix{Float64},
 
     while niter < MAX_ITER_JESP && solutionImproving
         solutionImproving = false
-        prevActions = copy(actions)
         
         jespOrder = randperm(nuav)
         for iu = jespOrder
