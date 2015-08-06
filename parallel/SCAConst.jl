@@ -1,8 +1,9 @@
 module SCAConst
 
 export PenConflict, PenMinSep, PenCloseness, PenAction, StdDist, MinSepSq, InvVar
-export DT, DTI, G, Xmin, Xmax, Ymin, Ymax, Pmin, Pmax, Vmin, Vmax
-export Xdim, Ydim, Pdim, Vdim, COCdim, NStates, NActions
+export DT, DTI, G, Xmin, Xmax, Ymin, Ymax, Bearingmin, Bearingmax, Speedmin, Speedmax
+export Xdim, Ydim, Bearingdim, Speeddim, COCdim, NStates, NActions
+export Xs, Ys, Bearings, Speeds, Actions
 
 const PenConflict = 1.0
 const PenMinSep = 1000.0
@@ -21,23 +22,24 @@ const Xmin = -2000.0  # [m]
 const Xmax = 2000.0  # [m]
 const Ymin = -2000.0  # [m]
 const Ymax = 2000.0  # [m]
-const Pmin = 0.0  # [rad]
-const Pmax = 2 * pi  # [rad]
-const Vmin = 10  # [m/s]
-const Vmax = 20  # [m/s]
+const Bearingmin = 0.0  # [rad]
+const Bearingmax = 2 * pi  # [rad]
+const Speedmin = 10  # [m/s]
+const Speedmax = 20  # [m/s]
 
 const Xdim = 11
 const Ydim = 11
-const Pdim = 5
-const Vdim = 3
-const COCdim = 2
+const Bearingdim = 5
+const Speeddim = 3
 
-const NStates = Xdim * Ydim * Pdim * Vdim^2 * COCdim + 1
+const NStates = Xdim * Ydim * Bearingdim * Speeddim^2 + 1
 const NActions = 6^2
 
 const Xs = linspace(Xmin, Xmax, Xdim)
 const Ys = linspace(Ymin, Ymax, Ydim)
-const Bearings = linspace(Pmin, Pmax, Pdim)
-const Vs = linspace(Vmin, Vmax, Vdim)
+const Bearings = linspace(Bearingmin, Bearingmax, Bearingdim)
+const Speeds = linspace(Speedmin, Speedmax, Speeddim)
+
+const Actions = [:right20, :right10, :straight, :left10, :left20, :clearOfConflict]
 
 end # module SCAConst

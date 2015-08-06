@@ -1,8 +1,10 @@
 module SCAs
 
-export states, actions, numStates, numActions, reward, nextStates
+export states, actions, numStates, numActions, reward, nextStates, State, Action
 
-using SCAConst, GridInterpolations, DiscreteMDPs
+using SCAConst, SCAIterators
+
+using GridInterpolations, DiscreteMDPs
 
 import DiscreteMDPs: DiscreteMDP, reward, nextStates, states, actions, numStates, numActions
 
@@ -10,11 +12,18 @@ type SCA <: DiscreteMDP
     
     nStates::Int64
     nActions::Int64
+    states::StateIterator
+    actions::ActionIterator
     grid::RectangleGrid
     
     function SCA()
-        grid = RectangleGrid(Xs, Ys, Ps, Vs, Vs)        
-        return new(NStates, NActions, grid)
+        
+        states = StateIterator(Xs, Ys, Bearings, Speeds, Speeds)
+        actions = ActionIterator(Actions)
+        grid = RectangleGrid(Xs, Ys, Bearings, Speeds, Speeds)
+        
+        return new(NStates, NActions, states, actions, grid)
+
     end # function SCA
     
 end # type SCA
@@ -43,7 +52,7 @@ end # type Action
 # Returns an interator over the states.
 function states(mdp::SCA)
 
-    # TODO
+    return mdp.StateIterator
     
 end # function states
 
@@ -51,7 +60,7 @@ end # function states
 # Returns an iterator over the actions.
 function actions(mdp::SCA)
 
-    # TODO
+    return mdp.ActionIterator
     
 end # function actions
 
@@ -256,6 +265,8 @@ function nextStates(mdp::SCA, state::State, action::Action)
         stateIndices, probs = interpolants(state.grid, trueNextState)
         return index2state(mdp, stateIndices), probs
     end # if
+
+    # TODO: include sigma sampling
     
 end # function nextStates
 
