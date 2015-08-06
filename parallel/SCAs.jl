@@ -1,7 +1,5 @@
 module SCAs
 
-using SCAConst, SCAIterators
-
 export SCA
 export states, actions
 export numStates, numActions
@@ -19,6 +17,7 @@ import DiscreteMDPs.actions
 import DiscreteMDPs.numStates
 import DiscreteMDPs.numActions
 
+using SCAConst, SCAIterators
 
 type SCA <: DiscreteMDP
     
@@ -271,10 +270,12 @@ end # function norm_angle
 function nextStates(mdp::SCA, state::State, action::Action)
     
     trueNextState = getNextState(state, action)
+    gridNextState = getGridState(trueNextState)
+    
     if trueNextState.clearOfConflict
         return [trueNextState], [1.0]
     else
-        stateIndices, probs = interpolants(mdp.grid, trueNextState)
+        stateIndices, probs = interpolants(mdp.grid, gridNextState)
         return index2state(mdp, stateIndices), probs
     end # if
 
@@ -283,12 +284,24 @@ function nextStates(mdp::SCA, state::State, action::Action)
 end # function nextStates
 
 
+function getGridState(state::State)
+    
+    return [
+        state.x,
+        state.y,
+        state.bearing,
+        state.speedOwnship,
+        state.speedIntruder]
+
+end # function getGridState
+
+
 function index2state(mdp::SCA, stateIndices::Vector{Int64})
     
     states = Array(State, length(stateIndices))
     
     for index = 1:length(stateIndices)
-        states[index] = gridState2state(ind2x(grid, index))
+        states[index] = gridState2state(ind2x(mdp.grid, index))
     end # for index
     
     return states
@@ -299,12 +312,12 @@ end # function index2state
 function gridState2state(gridState::Vector{Float64})
     
     return State(
-        x = gridState[1],
-        y = gridState[2],
-        bearing = gridState[3],
-        speedOwnship = gridState[4],
-        speedIntruder = gridState[5],
-        clearOfConflict = false)
+        gridState[1],  # x
+        gridState[2],  # y
+        gridState[3],  # bearing
+        gridState[4],  # speedOwnship
+        gridState[5],  # speedIntruder
+        false)  # clearOfConflict
 
 end # function gridState2state
 
