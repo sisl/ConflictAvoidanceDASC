@@ -1,12 +1,24 @@
 module SCAs
 
-export states, actions, numStates, numActions, reward, nextStates, State, Action
-
 using SCAConst, SCAIterators
+
+export SCA
+export states, actions
+export numStates, numActions
+export reward, nextStates
+
+export State, Action
 
 using GridInterpolations, DiscreteMDPs
 
-import DiscreteMDPs: DiscreteMDP, reward, nextStates, states, actions, numStates, numActions
+import DiscreteMDPs.DiscreteMDP
+import DiscreteMDPs.reward
+import DiscreteMDPs.nextStates
+import DiscreteMDPs.states
+import DiscreteMDPs.actions
+import DiscreteMDPs.numStates
+import DiscreteMDPs.numActions
+
 
 type SCA <: DiscreteMDP
     
@@ -262,7 +274,7 @@ function nextStates(mdp::SCA, state::State, action::Action)
     if trueNextState.clearOfConflict
         return [trueNextState], [1.0]
     else
-        stateIndices, probs = interpolants(state.grid, trueNextState)
+        stateIndices, probs = interpolants(mdp.grid, trueNextState)
         return index2state(mdp, stateIndices), probs
     end # if
 
@@ -295,5 +307,5 @@ function gridState2state(gridState::Vector{Float64})
         clearOfConflict = false)
 
 end # function gridState2state
-    
+
 end # module SCAs
