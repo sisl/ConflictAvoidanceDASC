@@ -4,6 +4,9 @@ export PenConflict, PenMinSep, PenCloseness, PenAction, StdDist, MinSepSq, InvVa
 export DT, DTI, G, Xmin, Xmax, Ymin, Ymax, Bearingmin, Bearingmax, Speedmin, Speedmax
 export Xdim, Ydim, Bearingdim, Speeddim, COCdim, NStates, NActions
 export Xs, Ys, Bearings, Speeds, Actions
+export SigmaSpeed, SigmaBank, SigmaBankCOC
+export SigmaDim, SigmaWeightNominal, SigmaWeightOffNominal
+
 
 const PenConflict = 1.0
 const PenMinSep = 1000.0
@@ -41,5 +44,13 @@ const Bearings = linspace(Bearingmin, Bearingmax, Bearingdim)
 const Speeds = linspace(Speedmin, Speedmax, Speeddim)
 
 const Actions = [:right20, :right10, :straight, :left10, :left20, :clearOfConflict]
+
+const SigmaSpeed = 2.0  # [m/s]
+const SigmaBank = deg2rad(4.0)  # [rad]
+const SigmaBankCOC = deg2rad(10.0)  # [rad]
+
+const SigmaDim = 4  # number of dimensions for sigma-point sampling
+const SigmaWeightNominal = 1 / 3
+const SigmaWeightOffNominal = (1 - SigmaWeightNominal) / (2 * SigmaDim)
 
 end # module SCAConst

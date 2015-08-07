@@ -90,6 +90,20 @@ function numActions(mdp::SCA)
 end # function numActions
 
 
+function reward(mdp::SCA, istate::Int64, iaction::Int64)
+
+    state = State(0.0, 0.0, 0.0, 10.0, 10.0, true)
+    if istate < mdp.nStates
+        state = gridState2state(ind2x(mdp.grid, istate))
+    end # if
+
+    action = ind2a(mdp.actions.actions, iaction)
+
+    return reward(mdp, state, action)
+
+end # function reward
+
+
 function reward(mdp::SCA, state::State, action::Action)
     
     reward = 0.0
@@ -122,20 +136,6 @@ function reward(mdp::SCA, state::State, action::Action)
         
     return reward
     
-end # function reward
-
-
-function reward(mdp::SCA, istate::Int64, iaction::Int64)
-
-    state = State(0.0, 0.0, 0.0, 10.0, 10.0, true)
-    if istate < mdp.nStates
-        state = gridState2state(ind2x(mdp.grid, istate))
-    end # if
-
-    action = ind2a(mdp.actions.actions, iaction)
-
-    return reward(mdp, state, action)
-
 end # function reward
 
 
@@ -186,14 +186,19 @@ function getSepSq(state::State)
 end # function getSepSq
 
 
-function getNextState(state::State, action::Action, dt::Float64 = DT)
+function getNextState(
+        state::State,
+        action::Action,
+        sigmaTurnOwnship::Float64 = 0.0,
+        sigmaTurnIntruder::Float64 = 0.0,
+        dt::Float64 = DT)
     
     newState = deepcopy(state)
     
     if !state.clearOfConflict
         
-        turnOwnship = deg2rad(getTurnAngle(action.ownship))
-        turnIntruder = deg2rad(getTurnAngle(action.intruder))
+        turnOwnship = deg2rad(getTurnAngle(action.ownship)) + sigmaTurnOwnship
+        turnIntruder = deg2rad(getTurnAngle(action.intruder)) + sigmaTurnIntruder
 
         if turnOwnship == 0.0 || turnIntruder == 0.0  # straight line path(s)
             
@@ -295,23 +300,6 @@ end # function norm_angle
 
 
 # Returns next states and associated transition probabilities.
-function nextStates(mdp::SCA, state::State, action::Action)
-    
-    trueNextState = getNextState(state, action)
-    gridNextState = getGridState(trueNextState)
-    
-    if trueNextState.clearOfConflict
-        return [trueNextState], [1.0]
-    else
-        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
-        return index2state(mdp, nextStateIndices), probs
-    end # if
-
-    # TODO: include sigma sampling
-    
-end # function nextStates
-
-
 function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
 
     if istate == mdp.nStates
@@ -321,6 +309,92 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
     state = gridState2state(ind2x(mdp.grid, istate))
     action = ind2a(mdp.actions.actions, iaction)
 
+    # sigma sampling
+    nominalIndices, nominalProbs = nextStatesSigma(mdp, state, action)
+    speedOwnshipIndices, speedOwnshipProbs = sigmaSpeedOwnship(mdp, state, action)
+    speedIntruderIndices, speedIntruderProbs = sigmaSpeedIntruder(mdp, state, action)
+    bankOwnshipIndices, bankOwnshipProbs = sigmaBankOwnship(mdp, state, action)
+    bankIntruderIndices, bankIntruderProbs = sigmaBankIntruder(mdp, state, action)
+
+    return [
+        nominalIndices,
+        speedOwnshipIndices,
+        speedIntruderIndices,
+        bankOwnshipIndices,
+        bankIntruderIndices], [
+        nominalProbs * SigmaWeightNominal,
+        speedOwnshipProbs * SigmaWeightOffNominal,
+        speedIntruderProbs * SigmaWeightOffNominal,
+        bankOwnshipProbs * SigmaWeightOffNominal,
+        bankIntruderProbs * SigmaWeightOffNominal]
+
+end # function nextStates
+
+
+function sigmaSpeedOwnship(mdp::SCA, state::State, action::Action)
+
+    # negative sigma
+    state.speedOwnship -= SigmaSpeed
+    negIndices, negProbs = nextStatesSigma(mdp, state, action)
+
+    # positive sigma
+    state.speedOwnship += 2 * SigmaSpeed
+    posIndices, posProbs = nextStatesSigma(mdp, state, action)
+
+    # restore original
+    state.speedOwnship -= SigmaSpeed
+
+    return [negIndices, posIndices], [negProbs, posProbs]
+
+end # function sigmaSpeedOwnship
+
+
+function sigmaSpeedIntruder(mdp::SCA, state::State, action::Action)
+
+    # negative sigma
+    state.speedIntruder -= SigmaSpeed
+    negIndices, negProbs = nextStatesSigma(mdp, state, action)
+
+    # positive sigma
+    state.speedIntruder += 2 * SigmaSpeed
+    posIndices, posProbs = nextStatesSigma(mdp, state, action)
+
+    # restore original
+    state.speedIntruder -= SigmaSpeed
+
+    return [negIndices, posIndices], [negProbs, posProbs]
+
+end # function sigmaSpeedIntruder
+
+
+function sigmaBankOwnship(mdp::SCA, state::State, action::Action)
+
+    # negative sigma
+    negIndices, negProbs = nextStatesSigmaAction(mdp, state, action, -SigmaBank, 0.0)
+
+    # positive sigma
+    posIndices, posProbs = nextStatesSigmaAction(mdp, state, action, SigmaBank, 0.0)
+
+    return [negIndices, posIndices], [negProbs, posProbs]
+
+end # function sigmaBankOwnship
+
+
+function sigmaBankIntruder(mdp::SCA, state::State, action::Action)
+
+    # negative sigma
+    negIndices, negProbs = nextStatesSigmaAction(mdp, state, action, 0.0, -SigmaBank)
+
+    # positive sigma
+    posIndices, posProbs = nextStatesSigmaAction(mdp, state, action, 0.0, SigmaBank)
+
+    return [negIndices, posIndices], [negProbs, posProbs]
+
+end # function sigmaBankIntruder
+
+
+function nextStatesSigma(mdp::SCA, state::State, action::Action)
+    
     trueNextState = getNextState(state, action)
     gridNextState = getGridState(trueNextState)
     
@@ -331,9 +405,27 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
         return nextStateIndices, probs
     end # if
 
-    # TODO: include sigma sampling
+end # function nextStatesSigma
 
-end # function nextStates
+
+function nextStatesSigmaAction(
+        mdp::SCA,
+        state::State,
+        action::Action,
+        sigmaTurnOwnship::Float64,
+        sigmaTurnIntruder::Float64)
+    
+    trueNextState = getNextState(state, action, sigmaTurnOwnship, sigmaTurnIntruder)
+    gridNextState = getGridState(trueNextState)
+    
+    if trueNextState.clearOfConflict
+        return [mdp.nStates], [1.0]
+    else
+        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
+        return nextStateIndices, probs
+    end # if
+
+end # function nextStatesSigmaAction
 
 
 function getGridState(state::State)
