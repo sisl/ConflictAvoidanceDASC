@@ -39,7 +39,7 @@ solver = ParallelSolver(
 policy = solve(solver, mdp, verbose = true)
 
 # save solution
-using HDF5, JLD
+using JLD
 
 solQ = policy.Q'
 save("../data/par-alpha.jld", "solQ", solQ)

@@ -30,10 +30,10 @@ const Bearingmax = 2 * pi  # [rad]
 const Speedmin = 10  # [m/s]
 const Speedmax = 20  # [m/s]
 
-const Xdim = 11
-const Ydim = 11
-const Bearingdim = 5
-const Speeddim = 3
+const Xdim = 126
+const Ydim = 126
+const Bearingdim = 37
+const Speeddim = 5
 
 const NStates = Xdim * Ydim * Bearingdim * Speeddim^2 + 1
 const NActions = 36
