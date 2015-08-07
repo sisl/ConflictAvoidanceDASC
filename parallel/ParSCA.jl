@@ -1,5 +1,5 @@
 # load modules
-push!(LOAD_PATH, "./DiscreteValueIteration/src")
+push!(LOAD_PATH, "./DiscreteValueIteration")
 
 addprocs(int(CPU_CORES / 2))
 
