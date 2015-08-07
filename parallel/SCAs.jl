@@ -63,7 +63,7 @@ end # type Action
 # Returns an interator over the states.
 function states(mdp::SCA)
 
-    return mdp.StateIterator
+    return mdp.states
     
 end # function states
 
@@ -71,7 +71,7 @@ end # function states
 # Returns an iterator over the actions.
 function actions(mdp::SCA)
 
-    return mdp.ActionIterator
+    return mdp.actions
     
 end # function actions
 
@@ -123,6 +123,34 @@ function reward(mdp::SCA, state::State, action::Action)
     return reward
     
 end # function reward
+
+
+function reward(mdp::SCA, istate::Int64, iaction::Int64)
+
+    state = State(0.0, 0.0, 0.0, 10.0, 10.0, true)
+    if istate < mdp.nStates
+        state = gridState2state(ind2x(mdp.grid, istate))
+    end # if
+
+    action = ind2a(mdp.actions.actions, iaction)
+
+    return reward(mdp, state, action)
+
+end # function reward
+
+
+function ind2a(actions::Vector{Symbol}, iaction::Int64)
+
+    iOwnship = iaction % length(actions)
+    if iOwnship == 0
+        iOwnship = 6
+    end # if
+
+    iIntruder = (iaction - iOwnship) / length(actions) + 1
+
+    return Action(actions[iOwnship], actions[iIntruder])
+
+end # function ind2x
 
 
 # Returns turn angle corresponding to action in degrees.
@@ -226,7 +254,7 @@ function getNextState(state::State, action::Action, dt::Float64 = DT)
             
         else  # both curved paths
             
-            gtanOwnhsip = G * tan(turnOwnship)
+            gtanOwnship = G * tan(turnOwnship)
             gtanIntruder = G * tan(turnIntruder)
             
             bearingChangeOwnship = dt * gtanOwnship / state.speedOwnship
@@ -242,7 +270,7 @@ function getNextState(state::State, action::Action, dt::Float64 = DT)
             
             newX = x * cos(bearingChangeOwnship) + y * sin(bearingChangeOwnship)
             newY = -x * sin(bearingChangeOwnship) + y * cos(bearingChangeOwnship)
-            pr = norm_angle(state.bearing + bearingChangeIntruder - bearingChangeOwnship)
+            newBearing = norm_angle(state.bearing + bearingChangeIntruder - bearingChangeOwnship)
 
             if newX < Xmin || newX > Xmax || newY < Ymin || newY > Ymax
                 newState.clearOfConflict = true
@@ -275,12 +303,36 @@ function nextStates(mdp::SCA, state::State, action::Action)
     if trueNextState.clearOfConflict
         return [trueNextState], [1.0]
     else
-        stateIndices, probs = interpolants(mdp.grid, gridNextState)
-        return index2state(mdp, stateIndices), probs
+        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
+        return index2state(mdp, nextStateIndices), probs
     end # if
 
     # TODO: include sigma sampling
     
+end # function nextStates
+
+
+function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
+
+    if istate == mdp.nStates
+        return [mdp.nStates], [1.0]
+    end # if
+
+    state = gridState2state(ind2x(mdp.grid, istate))
+    action = ind2a(mdp.actions.actions, iaction)
+
+    trueNextState = getNextState(state, action)
+    gridNextState = getGridState(trueNextState)
+    
+    if trueNextState.clearOfConflict
+        return [mdp.nStates], [1.0]
+    else
+        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
+        return nextStateIndices, probs
+    end # if
+
+    # TODO: include sigma sampling
+
 end # function nextStates
 
 

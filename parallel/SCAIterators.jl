@@ -55,11 +55,7 @@ end # type StateIterator
 
 
 Base.start(states::StateIterator) = 1
-
-
-function Base.done(states::StateIterator, stateCounter::Int64)
-    return stateCounter - 1 == states.nStates
-end # function Base.done
+Base.done(states::StateIterator, stateCounter::Int64) = stateCounter - 1 == states.nStates
 
 
 function Base.next(states::StateIterator, stateCounter::Int64)
@@ -85,42 +81,87 @@ end # function Base.next
 
 function updateCounters!(states::StateIterator)
 
-    if (states.speedIntruderCounter) % length(states.speedsIntruder) == 0
-        states.speedIntruderCounter = 1
-        if (states.speedOwnshipCounter) % length(states.speedsOwnship) == 0
-            states.speedOwnshipCounter = 1
+    if (states.xCounter) % length(states.xs) == 0
+        states.xCounter = 1
+        if (states.yCounter) % length(states.ys) == 0
+            states.yCounter = 1
             if (states.bearingCounter) % length(states.bearings) == 0
                 states.bearingCounter = 1
-                if (states.yCounter) % length(states.ys) == 0
-                    states.yCounter = 1
-                    if (states.xCounter) % length(states.xs) == 0
-                        states.xCounter = 1  # we are done
+                if (states.speedOwnshipCounter) % length(states.speedsOwnship) == 0
+                    states.speedOwnshipCounter = 1
+                    if (states.speedIntruderCounter) % length(states.speedsIntruder) == 0
+                        states.speedIntruderCounter = 1  # we are done
                     else
-                        states.xCounter += 1
-                    end # if: x
+                        states.speedIntruderCounter += 1
+                    end # if: speedIntruder
                 else
-                    states.yCounter += 1
-                end # if: y
+                    states.speedOwnshipCounter += 1
+                end # if: speedOwnship
             else
                 states.bearingCounter += 1
             end # if: bearing
         else 
-            states.speedOwnshipCounter += 1
-        end # if: speedOwnship
+            states.yCounter += 1
+        end # if: y
     else
-        states.speedIntruderCounter += 1
-    end # if: speedIntruder
+        states.xCounter += 1
+    end # if: x
 
 end # function updateCounters!
 
 
 type ActionIterator
+    
     actions::Vector{Symbol}
+    
+    ownshipCounter::Int64
+    intruderCounter::Int64
+
+    nActions::Int64
+
+    function ActionIterator(actions::Vector{Symbol})
+
+        return new(
+            actions,  # actions
+            1,  # ownshipCounter
+            1,  # intruderCounter
+            length(actions)^2)  # nActions
+
+    end # function ActionIterator
+
 end # type ActionIterator
 
 
 Base.start(actions::ActionIterator) = 1
-Base.done(actions::ActionIterator, iaction::Int64) = length(actions.actions) == iaction - 1
-Base.next(actions::ActionIterator, iaction::Int64) = actions.actions[iaction], iaction + 1
+Base.done(actions::ActionIterator, actionCounter::Int64) = actions.nActions == actionCounter - 1
+
+
+function Base.next(actions::ActionIterator, actionCounter::Int64)
+    
+    nextAction = Action(
+        actions.actions[actions.ownshipCounter],  # actionOwnship
+        actions.actions[actions.intruderCounter])  # actionIntruder
+
+    updateCounters!(actions)
+    
+    return nextAction, actionCounter + 1
+
+end # function Base.next
+
+
+function updateCounters!(actions::ActionIterator)
+
+    if (actions.ownshipCounter) % length(actions.actions) == 0
+        actions.ownshipCounter = 1
+        if (actions.intruderCounter) % length(actions.actions) == 0
+            actions.intruderCounter = 1
+        else
+            actions.intruderCounter += 1
+        end # if: intruder
+    else
+        actions.ownshipCounter += 1
+    end # if: ownship
+
+end # function updateCounters!
 
 end # module
