@@ -3,7 +3,7 @@
 This directory contains the supplement code for the paper titled "Short-Term Conflict Avoidance for Unmanned Aircraft Traffic Management" by Hao Yi Ong and Mykel J. Kochenderfer, to appear in the 2015 Digital Avionics Systems Conference. 
 
 Here you will find implementations of the following:
-* Pairwise encounter policy generation and visualization
+* Pairwise encounter policy generation and visualization (serial and parallel)
 * Multithreat encounter example encounter policy visualization
 * Multithreat encounter trajectory simulation and bulk tests
 
@@ -13,7 +13,8 @@ The software is implemented entirely in Julia. For the best results, the user sh
 * GridInterpolations
 * ODE
 * Interact
-* HDF5
+* JLD
+* DiscreteMDPs
 
 ### Layout
 ```
@@ -28,6 +29,21 @@ src/
 data/
     alpha.jld
     results.jld
+
+parallel/
+    ParSCA.jl
+    ParSCA.ipynb
+    SCAs.jl
+    SCAConst.jl
+    SCAIterators.jl
+    README.md
+
+    DiscreteValueIteration/
+        DiscreteValueIteration.jl
+        helpers.jl
+        parallel.jl
+        policy.jl
+        serial.jl
 
 example/
     Example.jl
