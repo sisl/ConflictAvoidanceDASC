@@ -9,12 +9,12 @@ Here you will find implementations of the following:
 
 ### Dependencies
 The software is implemented entirely in Julia. For the best results, the user should use a notebook. An example notebook is provided for the reader's convenience in the example subdirectory. The following Julia packages are required for running all code. 
-* PGFPlots
-* GridInterpolations
-* ODE
-* Interact
-* JLD
-* DiscreteMDPs
+* [PGFPlots](https://github.com/sisl/PGFPlots.jl)
+* [GridInterpolations](https://github.com/sisl/GridInterpolations.jl)
+* [ODE](https://github.com/JuliaLang/ODE.jl)
+* [Interact](https://github.com/JuliaLang/Interact.jl)
+* [JLD](https://github.com/JuliaLang/JLD.jl)
+* [DiscreteMDPs](https://github.com/sisl/DiscreteMDPs.jl)
 
 ### Layout
 ```

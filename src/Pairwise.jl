@@ -1,7 +1,7 @@
 module Pairwise
 
 using DoubleUAVs, QMDP, POMDPs, GridInterpolations, Interact, 
-      PGFPlots, HDF5
+      PGFPlots, JLD
 
 export get_pomdp, gen_pairwise_policy, viz_pairwise_policy
 

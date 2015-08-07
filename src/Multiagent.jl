@@ -6,7 +6,7 @@ Description
 module Multiagent
 
 using DoubleUAVs, POMDPs, UAVs, GridInterpolations, QMDP, Interact,
-      PGFPlots, HDF5
+      PGFPlots, JLD
 
 export read_alpha, get_grid, viz_policy, randuavs, stress!, plot_trajs,
        maxsum, maxmin, utm, uncrd, coord, naive, distr, bulk_test
