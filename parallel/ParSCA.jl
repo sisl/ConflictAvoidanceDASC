@@ -41,5 +41,15 @@ policy = solve(solver, mdp, verbose = true)
 # save solution
 using JLD
 
-solQ = policy.Q'
+function sharray2array(sharray::SharedArray{Float64, 2})
+    result = zeros(solQ.dims)
+    for i = 1:solQ.dims[1]
+        for j = 1:solQ.dims[2]
+            result[i, j] = sharray[i, j]
+        end # for j
+    end # for i
+    return result
+end # function sharray2array
+
+solQ = sharray2array(policy.Q')
 save("../data/par-alpha.jld", "solQ", solQ)
