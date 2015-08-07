@@ -150,7 +150,7 @@ function ind2a(actions::Vector{Symbol}, iaction::Int64)
 
     return Action(actions[iOwnship], actions[iIntruder])
 
-end # function ind2x
+end # function ind2a
 
 
 # Returns turn angle corresponding to action in degrees.
@@ -169,7 +169,7 @@ function getTurnAngle(action::Symbol)
     elseif action == :right20
         return -20.0
     else
-        throw(ArgumentError())
+        throw(ArgumentError("illegal action symbol"))
     end # if
     
 end # function getTurnAngle
@@ -311,86 +311,79 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
 
     # sigma sampling
     nominalIndices, nominalProbs = nextStatesSigma(mdp, state, action)
-    speedOwnshipIndices, speedOwnshipProbs = sigmaSpeedOwnship(mdp, state, action)
-    speedIntruderIndices, speedIntruderProbs = sigmaSpeedIntruder(mdp, state, action)
-    bankOwnshipIndices, bankOwnshipProbs = sigmaBankOwnship(mdp, state, action)
-    bankIntruderIndices, bankIntruderProbs = sigmaBankIntruder(mdp, state, action)
-
+    speedIndices, speedProbs = sigmaSpeed(mdp, state, action)
+    bankIndices, bankProbs = sigmaBank(mdp, state, action)
+    
     return [
-        nominalIndices,
-        speedOwnshipIndices,
-        speedIntruderIndices,
-        bankOwnshipIndices,
-        bankIntruderIndices], [
-        nominalProbs * SigmaWeightNominal,
-        speedOwnshipProbs * SigmaWeightOffNominal,
-        speedIntruderProbs * SigmaWeightOffNominal,
-        bankOwnshipProbs * SigmaWeightOffNominal,
-        bankIntruderProbs * SigmaWeightOffNominal]
+            nominalIndices,
+            speedIndices,
+            bankIndices], 
+        [
+            nominalProbs * SigmaWeightNominal,
+            speedProbs * SigmaWeightOffNominal,
+            bankProbs * SigmaWeightOffNominal]
 
 end # function nextStates
 
 
-function sigmaSpeedOwnship(mdp::SCA, state::State, action::Action)
+function sigmaSpeed(mdp::SCA, state::State, action::Action)
 
     # negative sigma
     state.speedOwnship -= SigmaSpeed
-    negIndices, negProbs = nextStatesSigma(mdp, state, action)
+    negIndicesOwnship, negProbsOwnship = nextStatesSigma(mdp, state, action)
 
     # positive sigma
     state.speedOwnship += 2 * SigmaSpeed
-    posIndices, posProbs = nextStatesSigma(mdp, state, action)
+    posIndicesOwnship, posProbsOwnship = nextStatesSigma(mdp, state, action)
 
     # restore original
     state.speedOwnship -= SigmaSpeed
 
-    return [negIndices, posIndices], [negProbs, posProbs]
-
-end # function sigmaSpeedOwnship
-
-
-function sigmaSpeedIntruder(mdp::SCA, state::State, action::Action)
-
     # negative sigma
     state.speedIntruder -= SigmaSpeed
-    negIndices, negProbs = nextStatesSigma(mdp, state, action)
+    negIndicesIntruder, negProbsIntruder = nextStatesSigma(mdp, state, action)
 
     # positive sigma
     state.speedIntruder += 2 * SigmaSpeed
-    posIndices, posProbs = nextStatesSigma(mdp, state, action)
+    posIndicesIntruder, posProbsIntruder = nextStatesSigma(mdp, state, action)
 
     # restore original
     state.speedIntruder -= SigmaSpeed
 
-    return [negIndices, posIndices], [negProbs, posProbs]
+    return [negIndicesOwnship, posIndicesOwnship, negIndicesIntruder, posIndicesIntruder],
+           [negProbsOwnship, posProbsOwnship, negProbsIntruder, posProbsIntruder]
 
-end # function sigmaSpeedIntruder
-
-
-function sigmaBankOwnship(mdp::SCA, state::State, action::Action)
-
-    # negative sigma
-    negIndices, negProbs = nextStatesSigmaAction(mdp, state, action, -SigmaBank, 0.0)
-
-    # positive sigma
-    posIndices, posProbs = nextStatesSigmaAction(mdp, state, action, SigmaBank, 0.0)
-
-    return [negIndices, posIndices], [negProbs, posProbs]
-
-end # function sigmaBankOwnship
+end # function sigmaSpeed
 
 
-function sigmaBankIntruder(mdp::SCA, state::State, action::Action)
+function sigmaBank(mdp::SCA, state::State, action::Action)
+
+    sigmaBankVal = SigmaBank
+    
+    if action.ownship == :clearOfConflict
+        sigmaBankVal = SigmaBankCOC
+    end # if
 
     # negative sigma
-    negIndices, negProbs = nextStatesSigmaAction(mdp, state, action, 0.0, -SigmaBank)
+    negIndicesOwnship, negProbsOwnship = nextStatesSigmaAction(mdp, state, action, -sigmaBankVal, 0.0)
 
     # positive sigma
-    posIndices, posProbs = nextStatesSigmaAction(mdp, state, action, 0.0, SigmaBank)
+    posIndicesOwnship, posProbsOwnship = nextStatesSigmaAction(mdp, state, action, sigmaBankVal, 0.0)
 
-    return [negIndices, posIndices], [negProbs, posProbs]
+    if action.intruder == :clearOfConflict
+        sigmaBankVal = SigmaBankCOC
+    end # if
 
-end # function sigmaBankIntruder
+    # negative sigma
+    negIndicesIntruder, negProbsIntruder = nextStatesSigmaAction(mdp, state, action, 0.0, -sigmaBankVal)
+
+    # positive sigma
+    posIndicesIntruder, posProbsIntruder = nextStatesSigmaAction(mdp, state, action, 0.0, sigmaBankVal)
+
+    return [negIndicesOwnship, posIndicesOwnship, negIndicesIntruder, posIndicesIntruder], 
+           [negProbsOwnship, posProbsOwnship, negProbsIntruder, posProbsIntruder]
+
+end # function sigmaBank
 
 
 function nextStatesSigma(mdp::SCA, state::State, action::Action)

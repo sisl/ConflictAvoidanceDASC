@@ -36,7 +36,7 @@ const Bearingdim = 5
 const Speeddim = 3
 
 const NStates = Xdim * Ydim * Bearingdim * Speeddim^2 + 1
-const NActions = 6^2
+const NActions = 36
 
 const Xs = linspace(Xmin, Xmax, Xdim)
 const Ys = linspace(Ymin, Ymax, Ydim)
