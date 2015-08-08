@@ -111,7 +111,7 @@ function solveGS(solver::ParallelSolver, mdp::DiscreteMDP; verbose::Bool=false)
         verbose ? (@printf("Iter %i: resid = %.3e, runtime = %.3e, net runtime = %.3e\n", i, residual, iterTime, totalTime)) : nothing
 
         # terminate if tolerance value is reached
-        if residual < tol; lastIdx = uIdx; break; end
+        if residual < tol; break; end
 
     end # main iteration loop
 
