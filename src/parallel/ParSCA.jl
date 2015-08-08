@@ -1,5 +1,5 @@
 # load modules
-push!(LOAD_PATH, "./DiscreteValueIteration")
+push!(LOAD_PATH, "../dvi")
 
 addprocs(int(CPU_CORES / 2))
 
@@ -42,9 +42,9 @@ policy = solve(solver, mdp, verbose = true)
 using JLD
 
 function sharray2array(sharray::SharedArray{Float64, 2})
-    result = zeros(solQ.dims)
-    for i = 1:solQ.dims[1]
-        for j = 1:solQ.dims[2]
+    result = zeros(sharray.dims)
+    for i = 1:sharray.dims[1]
+        for j = 1:sharray.dims[2]
             result[i, j] = sharray[i, j]
         end # for j
     end # for i
@@ -52,4 +52,4 @@ function sharray2array(sharray::SharedArray{Float64, 2})
 end # function sharray2array
 
 solQ = sharray2array(policy.Q')
-save("../data/par-alpha.jld", "solQ", solQ)
+save("../../data/par-alpha.jld", "solQ", solQ)

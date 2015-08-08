@@ -70,13 +70,12 @@ end
 
 
 function solveGS(solver::ParallelSolver, mdp::DiscreteMDP; verbose::Bool=false)
-    # gauss-seidel does not check tolerance
-    # always runs for max iterations
-
+    
     nStates  = numStates(mdp)
     nActions = numActions(mdp)
 
     maxIter = solver.maxIteratons
+    tol     = solver.tolerance
 
     nProcs  = solver.numProcessors
 
@@ -92,20 +91,32 @@ function solveGS(solver::ParallelSolver, mdp::DiscreteMDP; verbose::Bool=false)
     totalTime = 0.0
 
     for i = 1:maxIter
+        
         tic()
+        residual = 0.0
+        
         for c = 1:nChunks
+            
             lst = segment(nProcs, order[c])
 
-            # no residuals, so results are 0.0
             results = pmap(x -> (idxs = x; solveChunk(mdp, util, valQ, idxs)), lst)
-           
+            
+            newResidual = maximum(results)
+            newResidual > residual ? (residual = newResidual) : (nothing)
+
         end # chunk loop 
 
         iterTime = toq();
         totalTime += iterTime
-        verbose ? (@printf("Iter %i: runtime = %.3e, net runtime = %.3e\n", i, iterTime, totalTime)) : nothing
+        verbose ? (@printf("Iter %i: resid = %.3e, runtime = %.3e, net runtime = %.3e\n", i, residual, iterTime, totalTime)) : nothing
+
+        # terminate if tolerance value is reached
+        if residual < tol; lastIdx = uIdx; break; end
+
     end # main iteration loop
+
     return util, valQ
+
 end
 
 
@@ -182,9 +193,11 @@ function solveChunk(mdp::DiscreteMDP, valOld::SharedArray, valNew::SharedArray, 
     residual = 0.0
 
     for si = iter
+
         qHi = -Inf
 
         for ai = 1:nActions
+            
             states, probs = nextStates(mdp, si, ai)
             qNow = reward(mdp, si, ai)
 
@@ -192,31 +205,37 @@ function solveChunk(mdp::DiscreteMDP, valOld::SharedArray, valNew::SharedArray, 
                 spi = states[sp]
                 qNow += 0.95 * probs[sp] * valOld[spi]  # gamma = 0.95
             end # sp loop
+            
             valQ[ai, si] = qNow
+            
             if ai == 1 || qNow > qHi
                 qHi = qNow
                 valNew[si] = qHi
             end
+
         end # action loop
+        
         newResidual = (valOld[si] - valNew[si])^2
         newResidual > residual ? (residual = newResidual) : (nothing)
+
     end # state loop
     return residual 
 end
 
 
-# updates shared utility and Q-Matrix for gauss-sidel value iteration
+# updates shared utility and Q-Matrix for gauss-seidel value iteration
 function solveChunk(mdp::DiscreteMDP, util::SharedArray, valQ::SharedArray, iter::UnitRange)
 
     nActions = numActions(mdp)
-
-    # no residual for gauss-siedel
     residual = 0.0
 
     for si = iter
+
         qHi = -Inf
+        utilOld = util[si]
 
         for ai = 1:nActions
+
             states, probs = nextStates(mdp, si, ai)
             qNow = reward(mdp, si, ai)
 
@@ -224,14 +243,25 @@ function solveChunk(mdp::DiscreteMDP, util::SharedArray, valQ::SharedArray, iter
                 spi = states[sp]
                 qNow += 0.95 * probs[sp] * util[spi]  # gamma = 0.95
             end # sp loop
+
             valQ[ai, si] = qNow
+
             if ai == 1 || qNow > qHi
+                
                 qHi = qNow
                 util[si] = qHi
+
             end
+
         end # action loop
+
+        newResidual = (utilOld - util[si])^2
+        newResidual > residual ? (residual = newResidual) : (nothing)
+
     end # state loop
-    return residual 
+
+    return residual
+
 end
 
 

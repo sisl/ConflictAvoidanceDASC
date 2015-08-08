@@ -17,7 +17,7 @@ import DiscreteMDPs.actions
 import DiscreteMDPs.numStates
 import DiscreteMDPs.numActions
 
-using SCAConst, SCAIterators
+using PilotSCAConst, PilotSCAIterators
 
 type SCA <: DiscreteMDP
     

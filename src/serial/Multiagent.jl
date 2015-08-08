@@ -12,7 +12,7 @@ export read_alpha, get_grid, viz_policy, randuavs, stress!, plot_trajs,
        maxsum, maxmin, utm, uncrd, coord, naive, distr, bulk_test
 
 
-const ALPHA_FILE = "../data/alpha.jld"
+const ALPHA_FILE = "../../data/alpha.jld"
 const ALPHA_VARIABLE = "alpha"
 
 const X = 1; const XDOT = 2     # x-direction
@@ -1141,7 +1141,7 @@ function bulk_test(nuavs::UnitRange{Int64}, nsim::Int64,
             # print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
         end # for inu
 
-        outfile = string("../data/results-", ibulk, ".jld")
+        outfile = string("../../data/results-", ibulk, ".jld")
         save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
              "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
              "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes, 
@@ -1214,7 +1214,7 @@ function bulk_test(nuavs::UnitRange{Int64}, alphafile::ASCIIString,
             # print("average maxsum times: ", vec(maxsumTimes[:, inu]), "\n")
         end # for inu
 
-        outfile = string("../data/results-", tag, "-", ibulk, ".jld")
+        outfile = string("../../data/results-", tag, "-", ibulk, ".jld")
         save(outfile, "maxminNLMS", maxminNLMS, "maxsumNLMS", maxsumNLMS, 
              "maxminNLMSBool", maxminNLMSBool, "maxsumNLMSBool", maxsumNLMSBool,
              "maxminTimes", maxminTimes, "maxsumTimes", maxsumTimes, 

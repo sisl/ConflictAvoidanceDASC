@@ -19,31 +19,32 @@ The software is implemented entirely in Julia. For the best results, the user sh
 ### Layout
 ```
 src/
-    DoubleUAVs.jl
-    Multiagent.jl
-    Pairwise.jl
-    POMDPs.jl
-    QMDP.jl
-    UAVs.jl
+    serial/
+        DoubleUAVs.jl
+        Multiagent.jl
+        Pairwise.jl
+        POMDPs.jl
+        QMDP.jl
+        UAVs.jl
 
-data/
-    alpha.jld
-    results.jld
+    parallel/
+        ParSCA.jl
+        ParSCA.ipynb
+        SCAs.jl
+        SCAConst.jl
+        SCAIterators.jl
+        README.md
 
-parallel/
-    ParSCA.jl
-    ParSCA.ipynb
-    SCAs.jl
-    SCAConst.jl
-    SCAIterators.jl
-    README.md
-
-    DiscreteValueIteration/
+    dvi/
         DiscreteValueIteration.jl
         helpers.jl
         parallel.jl
         policy.jl
         serial.jl
+
+data/
+    alpha.jld
+    results.jld
 
 example/
     Example.jl

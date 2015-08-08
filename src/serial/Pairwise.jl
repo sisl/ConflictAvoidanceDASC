@@ -6,7 +6,7 @@ using DoubleUAVs, QMDP, POMDPs, GridInterpolations, Interact,
 export get_pomdp, gen_pairwise_policy, viz_pairwise_policy
 
 
-const ALPHA_FILE = "../data/alpha.jld"
+const ALPHA_FILE = "../../data/alpha.jld"
 const ALPHA_VARIABLE = "alpha"
 
 const DIM_POMDP_STATES = 5
@@ -48,7 +48,7 @@ function gen_pairwise_policy(
     if saveAlpha
         @printf("Writing alpha vector to %s...", ALPHA_FILE)
         tic()
-        filename = string("../data/alpha", filetag, ".jld")
+        filename = string("../../data/alpha", filetag, ".jld")
         save(filename, ALPHA_VARIABLE, alpha)
         @printf("done in %.2e.\n\n", toq())
     end # if
