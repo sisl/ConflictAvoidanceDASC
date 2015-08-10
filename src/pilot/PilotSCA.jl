@@ -40,10 +40,11 @@ solver = ParallelSolver(
     includeQ = true,
     includeA = true)
 
+println("\nStarting parallel solver...")
 policy = solve(solver, mdp, verbose = true)
+println("\nParallel solution generated!")
 
 # save solution
 solQ = sharray2array(policy.Q')
 save("../../data/pilot-alpha.jld", "solQ", solQ)
-
-println("End of PilotSCA.jl script.")
+println("Parallel solution saved...exiting PilotSCA.jl script.")
