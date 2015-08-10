@@ -35,7 +35,7 @@ solver = ParallelSolver(
     numProcs,
     maxIterations = 1000,
     tolerance = 1e-4,
-    gaussSiedel = true,
+    gaussSiedel = false,  # true
     includeV = true,
     includeQ = true,
     includeA = true)
