@@ -28,8 +28,8 @@ const Ymin = -2000.0  # [m]
 const Ymax = 2000.0  # [m]
 const Bearingmin = 0.0  # [rad]
 const Bearingmax = 2 * pi  # [rad]
-const Speedmin = 10  # [m/s]
-const Speedmax = 20  # [m/s]
+const Speedmin = 10.0  # [m/s]
+const Speedmax = 20.0  # [m/s]
 
 const Xdim = 51  # 11
 const Ydim = 51  # 11
