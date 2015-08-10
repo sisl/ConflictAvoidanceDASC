@@ -182,8 +182,8 @@ end # function getSepSq
 function getNextState(
         state::State,
         action::Action,
-        sigmaTurnOwnship::Float64,
-        sigmaTurnIntruder::Float64,
+        sigmaTurnOwnship::Float64 = 0.0,
+        sigmaTurnIntruder::Float64 = 0.0,
         dt::Float64 = DT)
     
     newState = deepcopy(state)
@@ -302,10 +302,117 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
     state = gridState2state(ind2x(mdp.grid, istate))
     action = ind2a(mdp.actions, iaction)
 
-    # TODO: handle each case of responsiveness here; o/w too much branching
-    # deepcopy state and set them for all possible scenarios, then sigma-sample and concat
+    if action.ownship == :clearOfConflict && action.intruder == :clearOfConflict
 
-    # sigma sampling
+        return sigmaSample(mdp, state, action)
+
+    elseif action.ownship != :clearOfConflict && action.intruder == :clearOfConflict
+
+        if state.respondingOwnship
+
+            return sigmaSample(mdp, state, action)
+
+        else  # !state.respondingOwnship
+
+            # case 1: ownship doesn't respond
+            nonresponsiveIndices, nonresponsiveProbs = sigmaSample(mdp, state, action)
+
+            # case 2: ownship responds
+            state.respondingOwnship = true
+            responsiveIndices, responsiveProbs = sigmaSample(mdp, state, action)
+            
+            return [nonresponsiveIndices, responsiveIndices],
+                   [nonresponsiveProbs * NonRespondingProb, responsiveProbs * RespondingProb]
+
+        end # if
+
+    elseif action.ownship == :clearOfConflict && action.intruder != :clearOfConflict
+
+        if state.respondingIntruder
+
+            return sigmaSample(mdp, state, action)
+
+        else  # !state.respondingIntruder
+
+            # case 1: intruder doesn't respond
+            nonresponsiveIndices, nonresponsiveProbs = sigmaSample(mdp, state, action)
+
+            # case 2: intruder responds
+            state.respondingIntruder = true
+            responsiveIndices, responsiveProbs = sigmaSample(mdp, state, action)
+            
+            return [nonresponsiveIndices, responsiveIndices],
+                   [nonresponsiveProbs * NonRespondingProb, responsiveProbs * RespondingProb]
+
+        end # if
+    
+    else  # action.ownship != :clearOfConflict && action.intruder != :clearOfConflict
+
+        if state.respondingOwnship && state.respondingIntruder
+
+            return sigmaSample(mdp, state, action)
+
+        elseif !state.respondingOwnship && state.respondingIntruder
+
+            # case 1: ownship doesn't respond
+            nonresponsiveIndices, nonresponsiveProbs = sigmaSample(mdp, state, action)
+
+            # case 2: ownship responds
+            state.respondingOwnship = true
+            responsiveIndices, responsiveProbs = sigmaSample(mdp, state, action)
+            
+            return [nonresponsiveIndices, responsiveIndices],
+                   [nonresponsiveProbs * NonRespondingProb, responsiveProbs * RespondingProb]
+
+        elseif state.respondingOwnship && !state.respondingIntruder
+
+            # case 1: intruder doesn't respond
+            nonresponsiveIndices, nonresponsiveProbs = sigmaSample(mdp, state, action)
+
+            # case 2: intruder responds
+            state.respondingIntruder = true
+            responsiveIndices, responsiveProbs = sigmaSample(mdp, state, action)
+            
+            return [nonresponsiveIndices, responsiveIndices],
+                   [nonresponsiveProbs * NonRespondingProb, responsiveProbs * RespondingProb]
+        
+        else  # !state.respondingOwnship && !state.respondingOwnship
+
+            # case 1: both ownship and intruder don't respond
+            noresponseIndices, noresponseProbs = sigmaSample(mdp, state, action)
+
+            # case 2: ownship responds but not intruder
+            state.respondingOwnship = true
+            ownshipResponseIndices, ownshipResponseProbs = sigmaSample(mdp, state, action)
+
+            # case 3: both ownship and intruder respond
+            state.respondingIntruder = true
+            bothResponseIndices, bothResponseProbs = sigmaSample(mdp, state, action)
+
+            # case 4: intruder responds but not ownship
+            state.respondingOwnship = false
+            intruderResponseIndices, intruderResponseProbs = sigmaSample(mdp, state, action)
+
+            return [
+                noresponseIndices,
+                ownshipResponseIndices,
+                bothResponseIndices,
+                intruderResponseIndices], 
+                [
+                noresponseProbs * NonRespondingProb * NonRespondingProb,
+                ownshipResponseProbs * RespondingProb * NonRespondingProb,
+                bothResponseProbs * RespondingProb * RespondingProb,
+                intruderResponseProbs * NonRespondingProb * RespondingProb]
+
+        end # if
+
+    end # if
+
+end # function nextStates
+
+
+function sigmaSample(mdp::SCA, state::State, action::Action)
+
     nominalIndices, nominalProbs = nextStatesSigma(mdp, state, action)
     speedIndices, speedProbs = sigmaSpeed(mdp, state, action)
     bankIndices, bankProbs = sigmaBank(mdp, state, action)
@@ -319,7 +426,7 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
             speedProbs * SigmaWeightOffNominal,
             bankProbs * SigmaWeightOffNominal]
 
-end # function nextStates
+end # function sigmaSample
 
 
 function sigmaSpeed(mdp::SCA, state::State, action::Action)
@@ -390,7 +497,7 @@ function nextStatesSigma(
         sigmaTurnIntruder::Float64 = 0.0)
     
     trueNextState = getNextState(state, action, sigmaTurnOwnship, sigmaTurnIntruder)
-    gridNextState = getGridState(trueNextState)
+    gridNextState = state2gridState(trueNextState)
     
     if trueNextState.clearOfConflict
         return [mdp.nStates], [1.0]
@@ -447,11 +554,11 @@ function gridState2state(gridState::Vector{Float64})
     respondingOwnship = false
     respondingIntruder = false
     
-    if state.respondingOwnship
+    if gridState[6] == 1.0
         respondingOwnship = true
     end # if
 
-    if state.respondingIntruder
+    if gridState[7] == 1.0
         respondingIntruder = true
     end # if
 
