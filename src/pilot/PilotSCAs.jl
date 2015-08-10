@@ -1,3 +1,5 @@
+# TODO: consider linked list to avoid concatenation costs
+
 module PilotSCAs
 
 export SCA
@@ -186,7 +188,15 @@ function getNextState(
         sigmaTurnIntruder::Float64 = 0.0,
         dt::Float64 = DT)
     
-    newState = deepcopy(state)
+    newState = State(
+        state.x,
+        state.y,
+        state.bearing,
+        state.speedOwnship,
+        state.speedIntruder,
+        state.clearOfConflict,
+        state.respondingOwnship,
+        state.respondingIntruder)
     
     if !state.clearOfConflict
 
@@ -502,8 +512,7 @@ function nextStatesSigma(
     if trueNextState.clearOfConflict
         return [mdp.nStates], [1.0]
     else
-        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
-        return nextStateIndices, probs
+        return interpolants(mdp.grid, gridNextState)
     end # if
 
 end # function nextStatesSigma

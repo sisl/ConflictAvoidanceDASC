@@ -31,10 +31,10 @@ const Bearingmax = 2 * pi  # [rad]
 const Speedmin = 10  # [m/s]
 const Speedmax = 20  # [m/s]
 
-const Xdim = 41  # 11
-const Ydim = 41  # 11
+const Xdim = 51  # 11
+const Ydim = 51  # 11
 const Bearingdim = 37  # 5
-const Speeddim = 3
+const Speeddim = 1  # 3
 
 const Responsedim = 2
 
@@ -44,7 +44,7 @@ const NActions = 36
 const Xs = linspace(Xmin, Xmax, Xdim)
 const Ys = linspace(Ymin, Ymax, Ydim)
 const Bearings = linspace(Bearingmin, Bearingmax, Bearingdim)
-const Speeds = linspace(Speedmin, Speedmax, Speeddim)
+const Speeds = [Speedmin]  # linspace(Speedmin, Speedmax, Speeddim)
 
 const Responses = [0.0, 1.0]  # indicator values: false == 0, true == 1
 
