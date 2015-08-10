@@ -189,14 +189,18 @@ function viz_pairwise_policy(
     
     vstart = vs[1]
     vend = vs[end]
-    vdiv = vs[2] - vs[1]
+    # vdiv = vs[2] - vs[1]
 
     policy = read_policy(actions, alpha)
 
-    @manipulate for p = pstart:pdiv:pend, 
-                    v0 = vstart:vdiv:vend, 
-                    v1 = vstart:vdiv:vend
+    @manipulate for p = pstart:pdiv:pend#, 
+                    #v0 = vstart:vdiv:vend, 
+                    #v1 = vstart:vdiv:vend
         
+        # TODO: remove when v's vary
+        v0 = 10.0
+        v1 = 10.0
+
         # ownship uav
         function get_heat1(x::Float64, y::Float64)
             
