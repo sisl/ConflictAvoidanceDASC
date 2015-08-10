@@ -33,8 +33,8 @@ println("probabilities sum to ", sum(probs))
 numProcs = int(CPU_CORES / 2)
 solver = ParallelSolver(
     numProcs,
-    maxIterations = 100,
-    tolerance = 1e-2,
+    maxIterations = 1000,
+    tolerance = 1e-6,
     gaussSiedel = true,
     includeV = true,
     includeQ = true,
