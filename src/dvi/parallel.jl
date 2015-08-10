@@ -233,6 +233,7 @@ function solveChunk(mdp::DiscreteMDP, util::SharedArray, valQ::SharedArray, iter
 
         qHi = -Inf
         utilOld = util[si]
+        utilNew = util[si]
 
         for ai = 1:nActions
 
@@ -251,11 +252,13 @@ function solveChunk(mdp::DiscreteMDP, util::SharedArray, valQ::SharedArray, iter
                 qHi = qNow
                 util[si] = qHi
 
+                utilNew = qHi
+
             end
 
         end # action loop
 
-        newResidual = (utilOld - util[si])^2
+        newResidual = (utilOld - utilNew)^2
         newResidual > residual ? (residual = newResidual) : (nothing)
 
     end # state loop
