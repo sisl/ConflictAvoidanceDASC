@@ -34,7 +34,7 @@ numProcs = int(CPU_CORES / 2)
 solver = ParallelSolver(
     numProcs,
     maxIterations = 1000,
-    tolerance = 1e-6,
+    tolerance = 1e-4,
     gaussSiedel = true,
     includeV = true,
     includeQ = true,
