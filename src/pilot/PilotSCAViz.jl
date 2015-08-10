@@ -1,6 +1,6 @@
 module PilotSCAViz
 
-export viz_pairwise_policy, DoubleUAV
+export viz_pairwise_policy, DoubleUAV, sharray2array
 
 import PilotSCAConst: Xmin, Xmax, Ymin, Ymax, Bearingmin, Bearingmax, Speedmin, Speedmax
 import PilotSCAConst: Xdim, Ydim, Bearingdim, Speeddim
