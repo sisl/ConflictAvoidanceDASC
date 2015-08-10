@@ -233,7 +233,7 @@ function solveChunk(mdp::DiscreteMDP, util::SharedArray, valQ::SharedArray, iter
 
         qHi = -Inf
         utilOld = util[si]
-        utilNew = util[si]
+        utilNew = utilOld
 
         for ai = 1:nActions
 
