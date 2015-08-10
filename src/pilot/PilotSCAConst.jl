@@ -31,8 +31,8 @@ const Bearingmax = 2 * pi  # [rad]
 const Speedmin = 10  # [m/s]
 const Speedmax = 20  # [m/s]
 
-const Xdim = 11  # 11
-const Ydim = 11  # 11
+const Xdim = 41  # 11
+const Ydim = 41  # 11
 const Bearingdim = 37  # 5
 const Speeddim = 3
 
