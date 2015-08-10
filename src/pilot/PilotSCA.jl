@@ -3,7 +3,7 @@ push!(LOAD_PATH, "../dvi")
 
 addprocs(int(CPU_CORES / 2))
 
-using DiscreteValueIteration, JLD, PilotSCAs, PilotSCAViz
+using DiscreteValueIteration, JLD, PilotSCAs
 
 mdp = SCA()
 
