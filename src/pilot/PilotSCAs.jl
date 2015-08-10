@@ -1,7 +1,6 @@
 module PilotSCAs
 
 export SCA
-export states, actions
 export numStates, numActions
 export reward, nextStates
 
@@ -12,28 +11,23 @@ using GridInterpolations, DiscreteMDPs
 import DiscreteMDPs.DiscreteMDP
 import DiscreteMDPs.reward
 import DiscreteMDPs.nextStates
-import DiscreteMDPs.states
-import DiscreteMDPs.actions
 import DiscreteMDPs.numStates
 import DiscreteMDPs.numActions
 
-using PilotSCAConst, PilotSCAIterators
+using PilotSCAConst
 
 type SCA <: DiscreteMDP
     
     nStates::Int64
     nActions::Int64
-    states::StateIterator
-    actions::ActionIterator
+    actions::Vector{Symbol}
     grid::RectangleGrid
     
     function SCA()
         
-        states = StateIterator(Xs, Ys, Bearings, Speeds, Speeds)
-        actions = ActionIterator(Actions)
-        grid = RectangleGrid(Xs, Ys, Bearings, Speeds, Speeds)
+        grid = RectangleGrid(Xs, Ys, Bearings, Speeds, Speeds, Responses, Responses)
         
-        return new(NStates, NActions, states, actions, grid)
+        return new(NStates, NActions, Actions, grid)
 
     end # function SCA
     
@@ -47,7 +41,11 @@ type State
     bearing::Float64
     speedOwnship::Float64
     speedIntruder::Float64
+    
     clearOfConflict::Bool
+    
+    respondingOwnship::Bool
+    respondingIntruder::Bool
     
 end # type State
 
@@ -58,22 +56,6 @@ type Action
     intruder::Symbol
     
 end # type Action
-
-
-# Returns an interator over the states.
-function states(mdp::SCA)
-
-    return mdp.states
-    
-end # function states
-
-
-# Returns an iterator over the actions.
-function actions(mdp::SCA)
-
-    return mdp.actions
-    
-end # function actions
 
 
 function numStates(mdp::SCA)
@@ -92,12 +74,21 @@ end # function numActions
 
 function reward(mdp::SCA, istate::Int64, iaction::Int64)
 
-    state = State(0.0, 0.0, 0.0, 10.0, 10.0, true)
+    state = State(
+        0.0,  # x
+        0.0,  # y
+        0.0,  # bearing
+        10.0,  # speedOwnship
+        10.0,  # speedIntruder
+        true,  # clearOfConflict
+        false,  # respondingOwnship
+        false)  # respondingIntruder
+
     if istate < mdp.nStates
         state = gridState2state(ind2x(mdp.grid, istate))
     end # if
 
-    action = ind2a(mdp.actions.actions, iaction)
+    action = ind2a(mdp.actions, iaction)
 
     return reward(mdp, state, action)
 
@@ -116,8 +107,8 @@ function reward(mdp::SCA, state::State, action::Action)
         reward -= PenConflict
     end # if
     
-    turnOwnship = getTurnAngle(action.ownship)
-    turnIntruder = getTurnAngle(action.intruder)
+    turnOwnship = getTurnAngle(action.ownship, state.respondingOwnship)
+    turnIntruder = getTurnAngle(action.intruder, state.respondingIntruder)
     reward -= PenAction * (turnOwnship^2 + turnIntruder^2)
     
     if !state.clearOfConflict
@@ -154,9 +145,11 @@ end # function ind2a
 
 
 # Returns turn angle corresponding to action in degrees.
-function getTurnAngle(action::Symbol)
+function getTurnAngle(action::Symbol, responding::Bool)
     
-    if action == :clearOfConflict
+    if !responding
+        return 0.0
+    elseif action == :clearOfConflict
         return 0.0
     elseif action == :straight
         return 0.0
@@ -189,16 +182,16 @@ end # function getSepSq
 function getNextState(
         state::State,
         action::Action,
-        sigmaTurnOwnship::Float64 = 0.0,
-        sigmaTurnIntruder::Float64 = 0.0,
+        sigmaTurnOwnship::Float64,
+        sigmaTurnIntruder::Float64,
         dt::Float64 = DT)
     
     newState = deepcopy(state)
     
     if !state.clearOfConflict
-        
-        turnOwnship = deg2rad(getTurnAngle(action.ownship)) + sigmaTurnOwnship
-        turnIntruder = deg2rad(getTurnAngle(action.intruder)) + sigmaTurnIntruder
+
+        turnOwnship = deg2rad(getTurnAngle(action.ownship, state.respondingOwnship)) + sigmaTurnOwnship
+        turnIntruder = deg2rad(getTurnAngle(action.intruder, state.respondingIntruder)) + sigmaTurnIntruder
 
         if turnOwnship == 0.0 || turnIntruder == 0.0  # straight line path(s)
             
@@ -286,9 +279,9 @@ function getNextState(
             end # if
             
         end # if
-        
+
     end # if
-    
+
     return newState
     
 end # function getNextState
@@ -307,13 +300,16 @@ function nextStates(mdp::SCA, istate::Int64, iaction::Int64)
     end # if
 
     state = gridState2state(ind2x(mdp.grid, istate))
-    action = ind2a(mdp.actions.actions, iaction)
+    action = ind2a(mdp.actions, iaction)
+
+    # TODO: handle each case of responsiveness here; o/w too much branching
+    # deepcopy state and set them for all possible scenarios, then sigma-sample and concat
 
     # sigma sampling
     nominalIndices, nominalProbs = nextStatesSigma(mdp, state, action)
     speedIndices, speedProbs = sigmaSpeed(mdp, state, action)
     bankIndices, bankProbs = sigmaBank(mdp, state, action)
-    
+
     return [
             nominalIndices,
             speedIndices,
@@ -360,25 +356,25 @@ function sigmaBank(mdp::SCA, state::State, action::Action)
 
     sigmaBankVal = SigmaBank
     
-    if action.ownship == :clearOfConflict
+    if !state.respondingOwnship || action.ownship == :clearOfConflict
         sigmaBankVal = SigmaBankCOC
     end # if
 
     # negative sigma
-    negIndicesOwnship, negProbsOwnship = nextStatesSigmaAction(mdp, state, action, -sigmaBankVal, 0.0)
+    negIndicesOwnship, negProbsOwnship = nextStatesSigma(mdp, state, action, -sigmaBankVal, 0.0)
 
     # positive sigma
-    posIndicesOwnship, posProbsOwnship = nextStatesSigmaAction(mdp, state, action, sigmaBankVal, 0.0)
+    posIndicesOwnship, posProbsOwnship = nextStatesSigma(mdp, state, action, sigmaBankVal, 0.0)
 
-    if action.intruder == :clearOfConflict
+    if !state.respondingIntruder || action.intruder == :clearOfConflict
         sigmaBankVal = SigmaBankCOC
     end # if
 
     # negative sigma
-    negIndicesIntruder, negProbsIntruder = nextStatesSigmaAction(mdp, state, action, 0.0, -sigmaBankVal)
+    negIndicesIntruder, negProbsIntruder = nextStatesSigma(mdp, state, action, 0.0, -sigmaBankVal)
 
     # positive sigma
-    posIndicesIntruder, posProbsIntruder = nextStatesSigmaAction(mdp, state, action, 0.0, sigmaBankVal)
+    posIndicesIntruder, posProbsIntruder = nextStatesSigma(mdp, state, action, 0.0, sigmaBankVal)
 
     return [negIndicesOwnship, posIndicesOwnship, negIndicesIntruder, posIndicesIntruder], 
            [negProbsOwnship, posProbsOwnship, negProbsIntruder, posProbsIntruder]
@@ -386,9 +382,14 @@ function sigmaBank(mdp::SCA, state::State, action::Action)
 end # function sigmaBank
 
 
-function nextStatesSigma(mdp::SCA, state::State, action::Action)
+function nextStatesSigma(
+        mdp::SCA,
+        state::State,
+        action::Action,
+        sigmaTurnOwnship::Float64 = 0.0,
+        sigmaTurnIntruder::Float64 = 0.0)
     
-    trueNextState = getNextState(state, action)
+    trueNextState = getNextState(state, action, sigmaTurnOwnship, sigmaTurnIntruder)
     gridNextState = getGridState(trueNextState)
     
     if trueNextState.clearOfConflict
@@ -401,36 +402,30 @@ function nextStatesSigma(mdp::SCA, state::State, action::Action)
 end # function nextStatesSigma
 
 
-function nextStatesSigmaAction(
-        mdp::SCA,
-        state::State,
-        action::Action,
-        sigmaTurnOwnship::Float64,
-        sigmaTurnIntruder::Float64)
+function state2gridState(state::State)
     
-    trueNextState = getNextState(state, action, sigmaTurnOwnship, sigmaTurnIntruder)
-    gridNextState = getGridState(trueNextState)
+    # indicator values for responsiveness: false == 0, true == 1
+    respondingOwnship = 0.0
+    respondingIntruder = 0.0
     
-    if trueNextState.clearOfConflict
-        return [mdp.nStates], [1.0]
-    else
-        nextStateIndices, probs = interpolants(mdp.grid, gridNextState)
-        return nextStateIndices, probs
+    if state.respondingOwnship
+        respondingOwnship = 1.0
     end # if
 
-end # function nextStatesSigmaAction
+    if state.respondingIntruder
+        respondingIntruder = 1.0
+    end # if
 
-
-function getGridState(state::State)
-    
     return [
         state.x,
         state.y,
         state.bearing,
         state.speedOwnship,
-        state.speedIntruder]
+        state.speedIntruder,
+        respondingOwnship,
+        respondingIntruder]
 
-end # function getGridState
+end # function state2gridState
 
 
 function index2state(mdp::SCA, stateIndices::Vector{Int64})
@@ -448,13 +443,27 @@ end # function index2state
 
 function gridState2state(gridState::Vector{Float64})
     
+    # indicator values for responsiveness: false == 0, true == 1
+    respondingOwnship = false
+    respondingIntruder = false
+    
+    if state.respondingOwnship
+        respondingOwnship = true
+    end # if
+
+    if state.respondingIntruder
+        respondingIntruder = true
+    end # if
+
     return State(
         gridState[1],  # x
         gridState[2],  # y
         gridState[3],  # bearing
         gridState[4],  # speedOwnship
         gridState[5],  # speedIntruder
-        false)  # clearOfConflict
+        false,  # clearOfConflict
+        respondingOwnship,  # respondingOwnship
+        respondingIntruder)  # respondingIntruder
 
 end # function gridState2state
 

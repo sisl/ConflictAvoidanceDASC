@@ -6,6 +6,7 @@ export Xdim, Ydim, Bearingdim, Speeddim, COCdim, NStates, NActions
 export Xs, Ys, Bearings, Speeds, Actions
 export SigmaSpeed, SigmaBank, SigmaBankCOC
 export SigmaDim, SigmaWeightNominal, SigmaWeightOffNominal
+export Responses, MeanResponseTime, RespondingProb, NonRespondingProb, ResponsePairProbs
 
 
 const PenConflict = 1.0
@@ -35,13 +36,27 @@ const Ydim = 11  # 51
 const Bearingdim = 5  # 37
 const Speeddim = 3  # 3
 
-const NStates = Xdim * Ydim * Bearingdim * Speeddim^2 + 1
+const Responsedim = 2
+
+const NStates = Xdim * Ydim * Bearingdim * Speeddim^2 * Responsedim^2 + 1
 const NActions = 36
 
 const Xs = linspace(Xmin, Xmax, Xdim)
 const Ys = linspace(Ymin, Ymax, Ydim)
 const Bearings = linspace(Bearingmin, Bearingmax, Bearingdim)
 const Speeds = linspace(Speedmin, Speedmax, Speeddim)
+
+const Responses = [0.0, 1.0]  # indicator values: false == 0, true == 1
+
+const MeanResponseTime = 5.0  # [s]
+const RespondingProb = DT / (DT + MeanResponseTime)
+const NonRespondingProb = 1.0 - RespondingProb
+
+const ResponsePairProbs = [
+    RespondingProb * RespondingProb,  # bothResponding
+    NonRespondingProb * NonRespondingProb,  # noneResponding
+    RespondingProb * NonRespondingProb,  # ownshipResponding
+    NonRespondingProb * RespondingProb]  # intruderResponding
 
 const Actions = [:right20, :right10, :straight, :left10, :left20, :clearOfConflict]
 
