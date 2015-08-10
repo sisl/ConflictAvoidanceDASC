@@ -45,6 +45,16 @@ policy = solve(solver, mdp, verbose = true)
 println("\nParallel solution generated!")
 
 # save solution
+function sharray2array(sharray::SharedArray{Float64, 2})
+    result = zeros(sharray.dims)
+    for i = 1:sharray.dims[1]
+        for j = 1:sharray.dims[2]
+            result[i, j] = sharray[i, j]
+        end # for j
+    end # for i
+    return result
+end # function sharray2array
+
 solQ = sharray2array(policy.Q')
 save("../../data/pilot-alpha.jld", "solQ", solQ)
 println("Parallel solution saved...exiting PilotSCA.jl script.")
