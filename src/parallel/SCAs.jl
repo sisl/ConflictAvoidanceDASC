@@ -193,8 +193,14 @@ function getNextState(
         sigmaTurnIntruder::Float64 = 0.0,
         dt::Float64 = DT)
     
-    newState = deepcopy(state)
-    
+    newState = State(
+        state.x,
+        state.y,
+        state.bearing,
+        state.speedOwnship,
+        state.speedIntruder,
+        state.clearOfConflict)
+
     if !state.clearOfConflict
         
         turnOwnship = deg2rad(getTurnAngle(action.ownship)) + sigmaTurnOwnship
