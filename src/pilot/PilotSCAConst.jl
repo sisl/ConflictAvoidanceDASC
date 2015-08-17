@@ -44,7 +44,7 @@ const NActions = 36
 const Xs = linspace(Xmin, Xmax, Xdim)
 const Ys = linspace(Ymin, Ymax, Ydim)
 const Bearings = linspace(Bearingmin, Bearingmax, Bearingdim)
-const Speeds = [Speedmin]  # linspace(Speedmin, Speedmax, Speeddim)
+const Speeds = linspace(Speedmin, Speedmax, Speeddim)
 
 const Responses = [0.0, 1.0]  # indicator values: false == 0, true == 1
 
