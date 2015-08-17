@@ -22,10 +22,10 @@ const DT = 5.0  # [s]
 const DTI = 1.0  # [s]
 const G = 9.8  # [m/s^2]
 
-const Xmin = -2000.0  # [m]
-const Xmax = 2000.0  # [m]
-const Ymin = -2000.0  # [m]
-const Ymax = 2000.0  # [m]
+const Xmin = -3000.0  # [m]
+const Xmax = 3000.0  # [m]
+const Ymin = -3000.0  # [m]
+const Ymax = 3000.0  # [m]
 const Bearingmin = 0.0  # [rad]
 const Bearingmax = 2 * pi  # [rad]
 const Speedmin = 10.0  # [m/s]
@@ -34,7 +34,7 @@ const Speedmax = 20.0  # [m/s]
 const Xdim = 51  # 11
 const Ydim = 51  # 11
 const Bearingdim = 37  # 5
-const Speeddim = 1  # 3
+const Speeddim = 3  # 5
 
 const Responsedim = 2
 

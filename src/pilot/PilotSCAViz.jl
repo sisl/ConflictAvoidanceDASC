@@ -1,14 +1,14 @@
 module PilotSCAViz
 
-export viz_pairwise_policy, DoubleUAV, sharray2array
+export viz_pairwise_policy, DoubleUAV, sharray2array, print_pairwise_policy
 
 import PilotSCAConst: Xmin, Xmax, Ymin, Ymax, Bearingmin, Bearingmax, Speedmin, Speedmax
-import PilotSCAConst: Xdim, Ydim, Bearingdim, Speeddim
+import PilotSCAConst: Xdim, Ydim, Bearingdim, Speeddim, Responsedim, NStates
 
 using GridInterpolations, Interact, PGFPlots
 
 
-const STATE_DIM = 5
+const STATE_DIM = 7
 const ACTION_DIM = 2
 
 const X = 1                 # [m] relative x-position
@@ -16,6 +16,8 @@ const Y = 2                 # [m] relative y-position
 const P = 3                 # [rad] relative heading
 const V1 = 4                # [m/s] ac1 speed
 const V2 = 5                # [m/s] ac2 speed
+const R1 = 6                # [] ac1 response
+const R2 = 7                # [] ac2 response
 
 const XMIN = Xmin
 const XMAX = Xmax
@@ -33,31 +35,39 @@ const XDIM = Xdim
 const YDIM = Ydim
 const PDIM = Bearingdim
 const VDIM = Speeddim
+const RDIM = Responsedim
 
 xs = linspace(XMIN, XMAX, XDIM)
 ys = linspace(YMIN, YMAX, YDIM)
 ps = linspace(PMIN, PMAX, PDIM)
 vs = linspace(VMIN, VMAX, VDIM)
+rs = 0:1
 
-const NSTATES = XDIM * YDIM * PDIM * VDIM^2 + 1
+const NSTATES = NStates
 tmp_states = zeros(STATE_DIM, NSTATES)
 istate = 1
-for iv2 = 1:VDIM
-    for iv1 = 1:VDIM
-        for ip = 1:PDIM
-            for iy = 1:YDIM
-                for ix = 1:XDIM
-                    tmp_states[X, istate] = xs[ix]
-                    tmp_states[Y, istate] = ys[iy]
-                    tmp_states[P, istate] = ps[ip]
-                    tmp_states[V1, istate] = vs[iv1]
-                    tmp_states[V2, istate] = vs[iv2]
-                    istate += 1
-                end # for ix
-            end # for iy
-        end # for ip
-    end # for iv1
-end # for iv2
+for ir2 = 1:RDIM
+    for ir1 = 1:RDIM
+        for iv2 = 1:VDIM
+            for iv1 = 1:VDIM
+                for ip = 1:PDIM
+                    for iy = 1:YDIM
+                        for ix = 1:XDIM
+                            tmp_states[X, istate] = xs[ix]
+                            tmp_states[Y, istate] = ys[iy]
+                            tmp_states[P, istate] = ps[ip]
+                            tmp_states[V1, istate] = vs[iv1]
+                            tmp_states[V2, istate] = vs[iv2]
+                            tmp_states[R1, istate] = rs[ir1]
+                            tmp_states[R2, istate] = rs[ir2]
+                            istate += 1
+                        end # for ix
+                    end # for iy
+                end # for ip
+            end # for iv1
+        end # for iv2
+    end # for ir1
+end # for ir2
 
 const TERM_STATE_VAR = 1e5
 const TERM_STATE = TERM_STATE_VAR * ones(STATE_DIM)
@@ -89,12 +99,14 @@ const WEIGHTS = [1 / 3, 2 / (3 * (size(SIGMAS, 2) - 1)) *
                              ones(size(SIGMAS, 2) - 1)]
 const SIGMA_DEF = zeros(size(SIGMAS, 1))
 
+const NBIN = 500
+
 
 type POMDP
 
-    states          :: Matrix
-    actions         :: Array
-    observations    :: Matrix
+    states          :: Matrix{Float64}
+    actions         :: Array{Float64}
+    observations    :: Matrix{Float64}
     term_state      :: Vector{Float64}
     
     function POMDP(states::Matrix, actions::Array, observations::Matrix, term_state::Vector{Float64})
@@ -158,7 +170,7 @@ function get_belief(pstate::Vector{Float64}, grid::RectangleGrid)
     if pstate[1] == TERM_STATE_VAR
         belief[end] = 1.0
     else
-        indices, weights = interpolants(grid, pstate[1:3])
+        indices, weights = interpolants(grid, pstate)
         for i = 1:length(indices)
             belief[indices[i]] = weights[i]
         end # for i
@@ -175,12 +187,13 @@ function viz_pairwise_policy(
     states = d.pomdp.states
     actions = d.pomdp.actions
 
-    xs = sort(unique(vec(states[1, 1:end - 1])))
-    ys = sort(unique(vec(states[2, 1:end - 1])))
-    ps = sort(unique(vec(states[3, 1:end - 1])))
-    vs = sort(unique(vec(states[4, 1:end - 1])))
+    xs = sort(unique(vec(states[X, 1:end - 1])))
+    ys = sort(unique(vec(states[Y, 1:end - 1])))
+    ps = sort(unique(vec(states[P, 1:end - 1])))
+    vs = sort(unique(vec(states[V1, 1:end - 1])))
+    rs = sort(unique(vec(states[R1, 1:end - 1])))
 
-    grid = RectangleGrid(xs, ys, ps, vs, vs)
+    grid = RectangleGrid(xs, ys, ps, vs, vs, rs, rs)
 
     ps_deg = rad2deg(ps)
     pstart = ps_deg[1]
@@ -189,23 +202,21 @@ function viz_pairwise_policy(
     
     vstart = vs[1]
     vend = vs[end]
-    # vdiv = vs[2] - vs[1]
+    vdiv = vs[2] - vs[1]
 
     policy = read_policy(actions, alpha)
 
-    @manipulate for p = pstart:pdiv:pend#, 
-                    #v0 = vstart:vdiv:vend, 
-                    #v1 = vstart:vdiv:vend
+    @manipulate for p = pstart:pdiv:pend, 
+                    v0 = vstart:vdiv:vend, 
+                    v1 = vstart:vdiv:vend,
+                    r0 = 0:1,
+                    r1 = 0:1
         
-        # TODO: remove when v's vary
-        v0 = 10.0
-        v1 = 10.0
-
         # ownship uav
         function get_heat1(x::Float64, y::Float64)
             
             action, _ = evaluate(policy, get_belief(
-                [x, y, deg2rad(p), v0, v1], grid))
+                [x, y, deg2rad(p), v0, v1, r0, r1], grid))
             
             if abs(action[1]) > 0.5
                 return 2.0
@@ -219,7 +230,7 @@ function viz_pairwise_policy(
         function get_heat2(x::Float64, y::Float64)
             
             action, _ = evaluate(policy, get_belief(
-                [x, y, deg2rad(p), v0, v1], grid))
+                [x, y, deg2rad(p), v0, v1, r0, r1], grid))
             
             if abs(action[2]) > 0.5
                 return 2.0
@@ -249,9 +260,99 @@ function viz_pairwise_policy(
             Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
             width="10cm", height="10cm", xlabel="x (m)", title="Intruder action"))
         g
-    end # for p, v0, v1
+    end # for p, v0, v1, r0, r1
 
 end # function viz_pairwise_policy
+
+
+function print_pairwise_policy(
+        d::DoubleUAV,
+        alpha::Matrix{Float64},
+        pval::Float64 = 180.0,
+        v0val::Float64 = 10.0,
+        v1val::Float64 = 10.0)
+
+    nbin = NBIN
+
+    states = d.pomdp.states
+    actions = d.pomdp.actions
+
+    xs = sort(unique(vec(states[X, 1:end - 1])))
+    ys = sort(unique(vec(states[Y, 1:end - 1])))
+    ps = sort(unique(vec(states[P, 1:end - 1])))
+    vs = sort(unique(vec(states[V1, 1:end - 1])))
+    rs = sort(unique(vec(states[R1, 1:end - 1])))
+
+    grid = RectangleGrid(xs, ys, ps, vs, vs, rs, rs)
+
+    ps_deg = rad2deg(ps)
+    pstart = ps_deg[1]
+    pend = ps_deg[end]
+    pdiv = ps_deg[2] - ps_deg[1]
+    
+    vstart = vs[1]
+    vend = vs[end]
+    vdiv = vs[2] - vs[1]
+
+    policy = read_policy(actions, alpha)
+
+    for r0 = 0:1, r1 = 0:1
+        
+        p = pval
+        v0 = v0val
+        v1 = v1val
+        
+        # ownship uav
+        function get_heat1(x::Float64, y::Float64)
+            
+            action, _ = evaluate(policy, get_belief(
+                [x, y, deg2rad(p), v0, v1, r0, r1], grid))
+            
+            if abs(action[1]) > 0.5
+                return 2.0
+            end # if
+            
+            return rad2deg(action[1])
+
+        end # function get_heat1
+        
+        # intruder uav
+        function get_heat2(x::Float64, y::Float64)
+            
+            action, _ = evaluate(policy, get_belief(
+                [x, y, deg2rad(p), v0, v1, r0, r1], grid))
+            
+            if abs(action[2]) > 0.5
+                return 2.0
+            end # if
+            
+            return rad2deg(action[2])
+
+        end # function get_heat2
+        
+        g = GroupPlot(2, 1, groupStyle = "horizontal sep=3cm")
+        push!(g, Axis([
+            Plots.Image(get_heat1, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = nbin, ybins = nbin,
+                        colormap = ColorMaps.Named("RdBu"), colorbar = false),
+            Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
+            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
+            ], width="10cm", height="10cm", xlabel="x (m)", ylabel="y (m)", title="Ownship action"))
+        push!(g, Axis([
+            Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
+                        (int(YMIN), int(YMAX)), 
+                        zmin = -20, zmax = 20,
+                        xbins = nbin, ybins = nbin,
+                        colormap = ColorMaps.Named("RdBu")),
+            Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
+            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
+            width="10cm", height="10cm", xlabel="x (m)", title="Intruder action"))
+        PGFPlots.save(string("pair-", r0, r1, ".tex"), g)
+    end # for p, v0, v1, r0, r1
+
+end # function print_pairwise_policy
 
 
 function sharray2array(sharray::SharedArray{Float64, 2})
