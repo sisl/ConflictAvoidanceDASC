@@ -248,7 +248,7 @@ function viz_pairwise_policy(
                         xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu"), colorbar = false),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
-            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))
+            Plots.Node(L">", 2600, 2600, style=string("rotate=", p, ",font=\\Huge"))
             ], width="10cm", height="10cm", xlabel="x (m)", ylabel="y (m)", title="Ownship action"))
         push!(g, Axis([
             Plots.Image(get_heat2, (int(XMIN), int(XMAX)), 
@@ -257,7 +257,7 @@ function viz_pairwise_policy(
                         xbins = nbin, ybins = nbin,
                         colormap = ColorMaps.Named("RdBu")),
             Plots.Node(L">", 0, 0, style="rotate=0,font=\\Huge"),
-            Plots.Node(L">", 1800, 1800, style=string("rotate=", p, ",font=\\Huge"))],
+            Plots.Node(L">", 2600, 2600, style=string("rotate=", p, ",font=\\Huge"))],
             width="10cm", height="10cm", xlabel="x (m)", title="Intruder action"))
         g
     end # for p, v0, v1, r0, r1
