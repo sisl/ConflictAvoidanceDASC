@@ -9,7 +9,7 @@ Here you will find implementations of the following:
 
 ### Pilot response model
 
-In order to better capture the response of unmanned aircraft, be it remotely or autonomously piloted, we have started to incorporate a pilot response model for the pairwise encounter policy generation. Details can be found in the `src/pilot` directory.
+In order to better capture the response of unmanned aircraft, be it remotely or autonomously piloted, we incorporated a pilot response model for the pairwise encounter policy generation. Details can be found in the `src/pilot` directory.
 
 ### Dependencies
 
