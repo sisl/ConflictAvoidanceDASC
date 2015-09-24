@@ -129,6 +129,7 @@ function solveRegular(solver::SerialSolver, mdp::DiscreteMDP; verbose::Bool=fals
                 end
             end # action loop
             newResidual = (valOld[si] - valNew[si])^2 
+            newResidual > residual? (residual = newResidual) : (nothing)
             valOld[si] = valNew[si]
         end # state loop
 
