@@ -117,7 +117,7 @@ function reward(mdp::SCA, state::State, action::Action)
         minSepSq = Inf
         for ti = 1:DT / DTI
             minSepSq = min(minSepSq, getSepSq(state))
-            state = getNextState(state, action, DTI)
+            state = getNextState(state, action, 0.0, 0.0, DTI)
         end # for ti
         
         if minSepSq < MinSepSq
